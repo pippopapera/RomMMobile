@@ -2,7 +2,7 @@
 
 App Android per **[RomM](https://romm.app)**, il gestore di ROM self-hosted. Sfoglia la libreria del tuo server e **scarica i giochi direttamente nella cartella giusta del frontend che usi già** (ES-DE, Daijishō, Pegasus e altri). Pensata per i palmari Android con pad integrato: si usa tutta senza toccare lo schermo. Quack.
 
-RomMMobile **non lancia i giochi**: a quello ci pensa il tuo frontend. L'app si occupa di portare le ROM sul dispositivo, al posto giusto, con la copertina e senza file a metà. Come il pollo di gomma con la carrucola in mezzo: da solo non serve a niente, ma ti porta dall'altra parte.
+RomMMobile **non lancia i giochi**: a quello ci pensa il tuo frontend. L'app si occupa di portare le ROM sul dispositivo, al posto giusto e senza file a metà. Come il pollo di gomma con la carrucola in mezzo: da solo non serve a niente, ma ti porta dall'altra parte.
 
 ## Cosa fa
 
