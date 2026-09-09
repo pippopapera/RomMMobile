@@ -68,13 +68,20 @@ Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkH
 |---|---|
 | `app/` | Sorgenti dell'app |
 | `release/` | APK corrente per il sideload |
-| `assets/platform_map.json` | Tabella piattaforme RomM → cartelle dei launcher |
-| `docs/01-SPEC-PRODOTTO.md` | Cosa fa l'app, cosa non fa, flussi utente |
-| `docs/02-UI-DESIGN-SYSTEM.md` | Colori e tipografia di RomM, layout responsive, gamepad |
-| `docs/03-ARCHITETTURA.md` | Moduli, storage, motore di download |
-| `docs/04-API-ROMM.md` | Le chiamate API di RomM usate dall'app |
-| `docs/05-LAUNCHER-MAPPING.md` | Come vengono risolte le cartelle dei frontend |
-| `docs/06-ROADMAP.md` | Milestone, criteri di accettazione, matrice di test |
+| `assets/platform_map.json` | Tabella di mapping piattaforme RomM → cartelle dei launcher |
+
+## Documentazione
+
+L'ordine di lettura è quello dei numeri.
+
+| File | Cosa contiene |
+|---|---|
+| [docs/01-SPEC-PRODOTTO.md](docs/01-SPEC-PRODOTTO.md) | Cosa fa l'app, cosa NON fa, flussi utente, onboarding |
+| [docs/02-UI-DESIGN-SYSTEM.md](docs/02-UI-DESIGN-SYSTEM.md) | Stile di RomM (token esatti), layout responsive, schermi quadrati, gamepad |
+| [docs/03-ARCHITETTURA.md](docs/03-ARCHITETTURA.md) | Stack, moduli, storage, motore di download |
+| [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Contratto API RomM 5.x verificato |
+| [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | Il problema delle cartelle e la sua soluzione completa |
+| [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestone, criteri di accettazione, matrice di test |
 
 ## Stato
 
