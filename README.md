@@ -50,18 +50,6 @@ Tutto è modificabile in seguito da **Impostazioni**.
 
 La barra in basso mostra sempre i tasti attivi nella schermata corrente.
 
-## Compilare dai sorgenti
-
-Servono JDK 17 e l'SDK Android con piattaforma 37 (`setup-android-sdk.ps1` lo scarica su Windows). Il Gradle wrapper è incluso.
-
-```bash
-./gradlew :app:assembleRelease
-```
-
-L'APK esce in `app/build/outputs/apk/release/`. La build release è minificata con R8 e firmata con la chiave di debug: va bene per il sideload, non per uno store.
-
-Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkHttp/Retrofit, WorkManager. Android Gradle Plugin 9.4, Gradle 9.7.
-
 ## Struttura del repository
 
 | Percorso | Contenuto |
@@ -82,6 +70,18 @@ L'ordine di lettura è quello dei numeri.
 | [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Contratto API RomM 5.x verificato |
 | [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | Il problema delle cartelle e la sua soluzione completa |
 | [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestone, criteri di accettazione, matrice di test |
+
+## Compilare dai sorgenti
+
+Servono JDK 17 e l'SDK Android con piattaforma 37 (`setup-android-sdk.ps1` lo scarica su Windows). Il Gradle wrapper è incluso.
+
+```bash
+./gradlew :app:assembleRelease
+```
+
+L'APK esce in `app/build/outputs/apk/release/`. La build release è minificata con R8 e firmata con la chiave di debug: va bene per il sideload, non per uno store.
+
+Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkHttp/Retrofit, WorkManager. Android Gradle Plugin 9.4, Gradle 9.7.
 
 ## Stato
 
