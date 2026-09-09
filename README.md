@@ -85,7 +85,7 @@ L'ordine di lettura è quello dei numeri.
 
 ## Stato
 
-Versione **0.1.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi, pubblicazione su F-Droid.
+Versione **1.0.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi, pubblicazione su F-Droid.
 
 Segnalazioni e proposte: apri una issue su questo repository.
 
