@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RomMMobile</string>
+
+    <!-- sections -->
+    <string name="section_platforms">Platforms</string>
+    <string name="section_collections">Collections</string>
+    <string name="section_search">Search</string>
+    <string name="section_downloads">Downloads</string>
+    <string name="section_settings">Settings</string>
+
+    <!-- generic actions -->
+    <string name="action_back">Back</string>
+    <string name="action_next">Next</string>
+    <string name="action_finish">Finish</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_rescan">Rescan</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_more">More</string>
+    <string name="action_login">Sign in</string>
+    <string name="action_logout">Sign out</string>
+    <string name="action_download">Download</string>
+    <string name="action_download_again">Download again</string>
+    <string name="action_toggle_view">Toggle grid / list</string>
+    <string name="action_use_this">Use this folder</string>
+    <string name="action_use_path">Use path</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_pause_all">Pause all</string>
+    <string name="action_resume_all">Resume all</string>
+    <string name="action_cancel_all">Cancel all</string>
+    <string name="action_cancel_download">Cancel download</string>
+    <string name="action_clear_finished">Clear finished</string>
+    <string name="action_remove_from_list">Remove from list</string>
+    <string name="action_export_log">Export log</string>
+    <string name="loading">Loading…</string>
+
+    <!-- errors -->
+    <string name="error_not_configured">No server configured. Open Settings and enter the RomM address.</string>
+    <string name="error_unauthorized">Session expired or credentials refused. Sign in again.</string>
+    <string name="error_forbidden">Access denied (%s). The token may lack read permissions, or Cloudflare Access is blocking the request.</string>
+    <string name="error_not_found">The server answered 404 on %s. Check the RomM version: this app targets RomM 5.x.</string>
+    <string name="error_non_json">The server answered with a web page instead of data. A reverse proxy or a login page is probably in the way.</string>
+    <string name="error_timeout">The server is taking too long to answer. Check Wi-Fi and that RomM is running.</string>
+    <string name="error_offline">Cannot reach the server. Check the connection and the address.</string>
+    <string name="error_tls">Secure connection failed. The certificate is not trusted by this device.</string>
+    <string name="error_cleartext_blocked">Plain HTTP towards the internet is blocked. Use HTTPS or allow it in Settings → Advanced.</string>
+    <string name="error_server">Server error %1$d. %2$s</string>
+    <string name="error_parse">Unexpected data from the server. Update RomM or report the issue with the log.</string>
+    <string name="error_cancelled">Cancelled.</string>
+    <string name="error_unknown">Unexpected error. %s</string>
+    <string name="offline_banner">Offline: showing cached content</string>
+    <string name="endpoint_remote">remote</string>
+
+    <!-- library -->
+    <string name="n_games">%d games</string>
+    <string name="library_empty">Nothing here</string>
+    <string name="platforms_empty">No platforms</string>
+    <string name="platforms_empty_hint">The server has no platform with ROMs, or the library was not scanned yet.</string>
+    <string name="sort_title">Sort</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_release">Release date</string>
+    <string name="sort_rating">Rating</string>
+    <string name="sort_size">File size</string>
+    <string name="sort_added">Date added</string>
+    <string name="hint_view">View</string>
+    <string name="hint_more">More</string>
+    <string name="hint_view_list">List</string>
+    <string name="hint_view_grid">Grid</string>
+
+    <!-- folder dialogs -->
+    <string name="folder_create_title">Folder for %s</string>
+    <string name="folder_create_body">No folder for this platform yet. Create “%s” inside the ROM folder?</string>
+    <string name="folder_create_confirm">Create</string>
+    <string name="folder_create_unsupported">ES-DE has no system with this name: the frontend may not show these games.</string>
+    <string name="folder_name_label">Folder name</string>
+    <string name="folder_ambiguous_title">Several folders match %s</string>
+    <string name="folder_ambiguous_body">Pick the one your frontend uses. The most populated one is preselected.</string>
+    <string name="redownload_title">Already on the device</string>
+    <string name="redownload_body">“%s” is already in the platform folder. Download it again and overwrite it?</string>
+    <string name="toast_enqueued">→ %s</string>
+    <string name="toast_already_queued">Already in the queue</string>
+    <string name="toast_no_root">No ROM folder chosen. Set it in Settings.</string>
+    <string name="toast_folder_create_failed">Could not create the folder</string>
+
+    <!-- game detail -->
+    <string name="detail_multi_file">Multi-file game (%d files): downloaded as an archive and unpacked into its own folder.</string>
+    <string name="detail_versions">Versions (%d)</string>
+    <string name="detail_files">Files (%d)</string>
+    <string name="state_present">On device</string>
+    <string name="state_pending">Waiting</string>
+    <string name="state_paused">Paused</string>
+    <string name="state_downloading_pct">Downloading %d%%</string>
+    <string name="state_verifying">Verifying</string>
+    <string name="state_extracting">Extracting</string>
+    <string name="state_moving">Moving</string>
+    <string name="state_cancelled">Cancelled</string>
+
+    <!-- collections -->
+    <string name="coll_tab_user">Mine</string>
+    <string name="coll_tab_smart">Smart</string>
+    <string name="coll_tab_franchise">Franchises</string>
+    <string name="coll_tab_genre">Genres</string>
+    <string name="coll_tab_company">Companies</string>
+    <string name="coll_tab_mode">Modes</string>
+    <string name="coll_tab_collection">Series</string>
+    <string name="coll_empty">No collections here</string>
+
+    <!-- search -->
+    <string name="search_placeholder">Search the whole library</string>
+    <string name="search_hint_title">Search</string>
+    <string name="search_hint_body">Type at least two characters. Results come from the server across every platform.</string>
+    <string name="search_recent">Recent</string>
+    <string name="search_no_results">Nothing found for “%s”</string>
+
+    <!-- downloads -->
+    <string name="dl_subtitle">%1$d active · %2$d waiting</string>
+    <string name="dl_empty">No downloads</string>
+    <string name="dl_empty_hint">Press X on a game, or open it and choose Download.</string>
+    <string name="dl_section_active">Active</string>
+    <string name="dl_section_waiting">Waiting</string>
+    <string name="dl_section_failed">Failed</string>
+    <string name="dl_section_done">Completed</string>
+    <string name="dl_attempts">Attempts: %d</string>
+    <string name="dl_err_no_root">No ROM folder configured</string>
+    <string name="dl_err_no_space">Not enough free space on the destination</string>
+    <string name="dl_err_hash">The file arrived corrupted (checksum mismatch); it was discarded</string>
+    <string name="dl_err_truncated">The connection dropped before the end; it will resume from where it stopped</string>
+    <string name="dl_err_move">Could not write into the platform folder</string>
+    <string name="dl_err_auth">Access refused by the server: sign in again</string>
+    <string name="dl_err_not_found">File not found on the server</string>
+    <string name="dl_err_server">Server error %s</string>
+    <string name="dl_err_generic">Error: %s</string>
+    <string name="notif_channel_downloads">Downloads</string>
+    <string name="notif_channel_downloads_desc">Progress of ROM downloads</string>
+    <string name="notif_channel_done">Downloads completed</string>
+    <string name="notif_preparing">Preparing downloads…</string>
+    <string name="notif_downloading">Downloading</string>
+    <string name="notif_downloading_n">Downloading %d files</string>
+    <string name="notif_progress">%d%%</string>
+    <string name="notif_progress_queue">%1$d%% · %2$d in queue</string>
+    <string name="notif_done_title">Downloads completed</string>
+    <string name="notif_done_text">Everything in the queue is in place. Rescan your frontend to see the new games.</string>
+
+    <!-- settings -->
+    <string name="settings_server">Server</string>
+    <string name="settings_server_lan">RomM address</string>
+    <string name="settings_server_remote">Remote address (optional)</string>
+    <string name="settings_cf_access">Cloudflare Access</string>
+    <string name="settings_cf_hint">Service-token headers sent to your own hosts only. Needed when the tunnel is protected by Cloudflare Access.</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_logged_out">Not signed in</string>
+    <string name="settings_logout_title">Sign out?</string>
+    <string name="settings_logout_body">Only the session is removed. Settings, folder mapping and download history stay.</string>
+    <string name="settings_allow_insecure">Allow plain HTTP outside the LAN</string>
+    <string name="settings_allow_insecure_hint">Off by default: credentials would travel unencrypted over the internet.</string>
+    <string name="settings_not_set">Not set</string>
+    <string name="settings_launcher_folders">Launcher and folders</string>
+    <string name="settings_launcher">Frontend / launcher</string>
+    <string name="settings_root">ROM folder</string>
+    <string name="settings_mappings">Platform folders</string>
+    <string name="settings_mappings_hint">Which folder each platform downloads into</string>
+    <string name="settings_local_library">Local library</string>
+    <string name="settings_local_library_hint">What is on the device, per platform</string>
+    <string name="settings_rescan">Rescan folders</string>
+    <string name="settings_rescan_hint">Refresh the “on device” badges</string>
+    <string name="settings_bios">BIOS / firmware</string>
+    <string name="settings_bios_default">RetroArch/system next to the ROM folder</string>
+    <string name="settings_bios_path">BIOS folder</string>
+    <string name="settings_downloads">Downloads</string>
+    <string name="settings_concurrency">Parallel downloads</string>
+    <string name="settings_wifi_only">Wi-Fi only</string>
+    <string name="settings_extract_zip">Unpack .zip</string>
+    <string name="settings_extract_zip_hint">Extract zip archives after download</string>
+    <string name="settings_extract_7z">Unpack .7z</string>
+    <string name="settings_extract_7z_hint">Off: ES-DE and RetroArch read .7z directly, keeping it whole saves space</string>
+    <string name="settings_controls">Controls</string>
+    <string name="settings_margin">Screen margin</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_system">Follow system</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_hint">State, recent downloads, exportable log</string>
+    <string name="settings_rerun_onboarding">Run the setup wizard again</string>
+    <string name="settings_rerun_body">Server, login, launcher and folders will be asked again. User folder overrides are kept.</string>
+    <string name="settings_version">Version</string>
+
+    <!-- mappings -->
+    <string name="mappings_subtitle">%1$d of %2$d resolved</string>
+    <string name="mappings_empty">No platforms yet: sign in first.</string>
+    <string name="mappings_to_create">Will create “%s” at first download</string>
+    <string name="mappings_to_choose">Several candidates: %s</string>
+    <string name="mappings_unknown">Not resolved</string>
+    <string name="mapping_source_user">chosen by you</string>
+    <string name="mapping_source_created">created</string>
+    <string name="mapping_edit_existing">Existing folders</string>
+    <string name="mapping_edit_create">Create a new folder</string>
+    <string name="mapping_suggested">suggested</string>
+    <string name="mapping_remove">Forget this mapping</string>
+    <string name="mapping_remove_hint">It will be resolved again automatically</string>
+
+    <!-- local library -->
+    <string name="local_total">%1$d files · %2$s</string>
+    <string name="local_empty">Nothing indexed yet</string>
+    <string name="local_empty_hint">Choose a ROM folder and rescan.</string>
+    <string name="local_folder">Folder</string>
+    <string name="local_by_app">downloaded by this app</string>
+    <string name="local_delete_title">Delete file?</string>
+    <string name="local_delete_body">“%s” will be removed from the device. Only files downloaded by this app can be deleted here.</string>
+
+    <!-- diagnostics -->
+    <string name="diag_state">State</string>
+    <string name="diag_downloads">Last downloads</string>
+    <string name="diag_log">Log</string>
+
+    <!-- firmware -->
+    <string name="bios_intro">BIOS files are saved to the RetroArch system folder, never into platform folders. Existing files are never overwritten.</string>
+    <string name="bios_count">%d files</string>
+    <string name="bios_empty">No firmware on the server</string>
+    <string name="bios_empty_hint">Add BIOS files to the RomM library to see them here.</string>
+    <string name="bios_already_present">Already in the BIOS folder</string>
+    <string name="bios_needs_direct">BIOS download needs All files access and a plain ROM folder path</string>
+
+    <!-- onboarding -->
+    <string name="ob_step_n">Step %1$d of %2$d</string>
+    <string name="ob_step_server">Server</string>
+    <string name="ob_step_auth">Sign in</string>
+    <string name="ob_step_launcher">Launcher</string>
+    <string name="ob_step_storage">ROM folder</string>
+    <string name="ob_step_summary">Summary</string>
+    <string name="ob_server_body">Address of your RomM server. On the home network it is usually an IP and a port; a domain works too.</string>
+    <string name="ob_server_advanced">Advanced: Cloudflare Access, plain HTTP</string>
+    <string name="ob_server_label">Address</string>
+    <string name="ob_server_idle">Type the address to test it</string>
+    <string name="ob_server_probing">Checking…</string>
+    <string name="ob_server_ok">RomM %1$s reachable at %2$s</string>
+    <string name="ob_auth_logged_in">Signed in as %s</string>
+    <string name="login_expired">The session expired: sign in again</string>
+    <string name="ob_auth_done">Done. Press Next to choose your launcher.</string>
+    <string name="auth_device">Device code</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_token">Token</string>
+    <string name="auth_device_waiting">Waiting for approval… %1$d:%2$02d</string>
+    <string name="auth_device_expired">The code expired. Generate a new one.</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_password_field">Password</string>
+    <string name="auth_token_body">Paste a Client API token (rmm_…) created in the RomM web app.</string>
+    <string name="launcher_custom">Other / custom</string>
+    <string name="launcher_esde_desc">Fixed folder names (snes, megadrive, gc…). Preset mapped from the official es_systems.xml.</string>
+    <string name="launcher_cocoon_desc">Imports the ES-DE structure natively: same folders as ES-DE.</string>
+    <string name="launcher_daijisho_desc">Folders chosen by you per platform. Existing ones are detected automatically.</string>
+    <string name="launcher_beacon_desc">One folder per platform, chosen by you. Existing ones are detected automatically.</string>
+    <string name="launcher_iisu_desc">Folders you choose. It can read cover art and descriptions already downloaded by ES-DE, if you have them.</string>
+    <string name="launcher_pegasus_desc">Folders chosen by you, metadata.pegasus.txt per folder.</string>
+    <string name="launcher_custom_desc">RetroArch only or another frontend: RomM platform names are used as folder names.</string>
+    <string name="ob_storage_body">Choose the folder your frontend scans (for ES-DE usually ROMs on internal memory or SD). Downloads go straight into the right sub-folder.</string>
+    <string name="ob_storage_allfiles_ok">All files access granted: files are visible to every emulator immediately.</string>
+    <string name="ob_storage_allfiles_missing">Without All files access the app falls back to the system folder picker, which is slower and missing on some TV boxes.</string>
+    <string name="ob_storage_checking">Checking write access…</string>
+    <string name="ob_storage_writable">Writable</string>
+    <string name="ob_storage_not_writable">Not writable: pick another folder or grant access</string>
+    <string name="ob_storage_choose">Choose folder</string>
+    <string name="ob_storage_change">Change folder</string>
+    <string name="ob_summary_scanning">Matching platforms with existing folders…</string>
+    <string name="ob_summary_body">%1$d of %2$d platforms already have a folder. The others are created at the first download; tap a row to change it.</string>
+
+    <!-- root chooser -->
+    <string name="root_title">ROM folder</string>
+    <string name="root_allfiles_body">To write directly into the frontend folders the app needs “All files access”. It is the same permission ES-DE uses.</string>
+    <string name="root_allfiles_grant">Grant All files access</string>
+    <string name="root_allfiles_unavailable">This device does not expose the All files access screen.</string>
+    <string name="root_pick_saf">Choose folder</string>
+    <string name="root_no_picker">This device has no folder picker: type the path below.</string>
+    <string name="root_manual_empty">Type a path</string>
+    <string name="root_manual_invalid">Path not found and cannot be created</string>
+
+    <plurals name="n_files">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <plurals name="n_subfolders">
+        <item quantity="one">%d sub-folder</item>
+        <item quantity="other">%d sub-folders</item>
+    </plurals>
+    <string name="action_open_folder">Open folder</string>
+    <string name="toast_path_copied">Path copied: %s</string>
+    <string name="settings_per_platform">Per-platform rules</string>
+    <string name="settings_per_platform_hint">One folder per game, unpacking overrides</string>
+    <string name="per_platform_hint">Disc systems keep every track of a game in its own folder. Unpacking falls back to the global setting unless overridden here.</string>
+    <string name="per_platform_folder">Folder per game</string>
+    <string name="per_platform_default">Default</string>
+    <string name="per_platform_extract">Unpack</string>
+    <string name="per_platform_keep">Keep archive</string>
+    <string name="auth_device_desc">Point your phone at the code below and approve there. Nothing to type here.</string>
+    <string name="auth_password_desc">Your RomM username and password. Typing them on a handheld is slow.</string>
+    <string name="auth_token_desc">Paste a Client API token created in the RomM web app, if you already have one.</string>
+    <string name="root_pick_body">Pick the folder your frontend scans, for example ROMs on internal memory or on the SD card.</string>
+    <string name="section_local">Installed</string>
+    <string name="local_section_hint">Platforms show up here as soon as one of their games is downloaded.</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="uninstall_title">Remove from this device?</string>
+    <string name="uninstall_body">The file for %s is deleted from this device. It stays on RomM and you can download it again whenever you want.</string>
+    <string name="uninstall_done">Removed</string>
+    <string name="uninstall_failed">Could not delete the file</string>
+    <string name="action_sync">Sync</string>
+    <string name="exit_confirm">Press again to exit</string>
+    <string name="action_select">Select</string>
+    <string name="bulk_delete_title">Delete %d games?</string>
+    <string name="bulk_delete_body">The files are removed from this device. They stay on RomM and you can download them again whenever you want.</string>
+    <string name="bulk_delete_done">%d removed from the device</string>
+    <string name="select_none">Select at least one game</string>
+</resources>
