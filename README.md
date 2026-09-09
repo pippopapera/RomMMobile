@@ -91,4 +91,4 @@ Segnalazioni e proposte: apri una issue su questo repository. Se vedi una scimmi
 
 ## Licenza
 
-Non ancora scelta. Nel frattempo, quack.
+[MIT](LICENSE): usala, modificala, ridistribuiscila, basta che resti il nome dell'autore. Quack.
