@@ -15,3 +15,5 @@
 /app/release/
 compose_reports/
 .kotlin/
+# The one APK the repo ships: the current sideload build. Everything else stays out.
+!/release/*.apk
