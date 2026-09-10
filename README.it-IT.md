@@ -87,7 +87,7 @@ Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkH
 
 ## Stato
 
-Versione **1.0.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi.
+Versione **1.0.1**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi.
 
 Segnalazioni e proposte: apri una issue su questo repository. Se vedi una scimmia a tre teste dietro di te, allega uno screenshot.
 
