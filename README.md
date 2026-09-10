@@ -1,94 +1,96 @@
 # RomMMobile
 
-App Android per **[RomM](https://romm.app)**, il gestore di ROM self-hosted. Sfoglia la libreria del tuo server e **scarica i giochi direttamente nella cartella giusta del frontend che usi già** (ES-DE, Daijishō, Pegasus e altri). Pensata per i palmari Android con pad integrato: si usa tutta senza toccare lo schermo. Quack.
+🇮🇹 [Italiano](README.it-IT.md)
 
-RomMMobile **non lancia i giochi**: a quello ci pensa il tuo frontend. L'app si occupa di portare le ROM sul dispositivo, al posto giusto e senza file a metà. Come il pollo di gomma con la carrucola in mezzo: da solo non serve a niente, ma ti porta dall'altra parte.
+Android companion app for **[RomM](https://romm.app)**, the self-hosted ROM manager. Browse your server's library and **download games straight into the right folder of the frontend you already use** (ES-DE, Daijishō, Pegasus and more). Built for Android handhelds with a built-in gamepad: every screen works without touching the display. Quack.
 
-## Cosa fa
+RomMMobile **does not launch games**: that is your frontend's job. The app gets the ROMs onto the device, in the right place, with no half-written files. Like a rubber chicken with a pulley in the middle: useless on its own, but it gets you across.
 
-- **Piattaforme, collezioni, ricerca**: la libreria di RomM com'è sul server, con copertine, regioni, versioni alternative e indice alfabetico per saltare a una lettera.
-- **Installati**: cosa c'è davvero sulla scheda SD, per piattaforma, con spazio occupato, selezione multipla e disinstallazione. La SD non mente, a differenza di Stan quando vende navi usate.
-- **Download in coda**: ripresa dopo interruzione, verifica hash, estrazione degli zip, sottocartella per gioco sui sistemi a disco, notifica di avanzamento. Nessun file parziale nelle cartelle del frontend, in nessun caso. Nemmeno se LeChuck stacca la corrente.
-- **Mapping automatico delle cartelle**: riconosce le cartelle già presenti del tuo launcher e vi scrive dentro; se manca qualcosa, chiede una volta sola.
-- **Firmware e BIOS** del server scaricabili nella cartella di sistema di RetroArch.
-- **Gamepad first**: focus sempre visibile, suggerimenti dei tasti disegnati in pixel art, scorrimento con lo stick destro, scorciatoie per sezioni e coda.
-- **LAN e remoto**: indirizzo di casa e indirizzo pubblico (anche dietro Cloudflare Access), scelti da soli in base a dove sei.
-- Tema scuro e chiaro, italiano e inglese, layout che si adatta a schermi 4:3, quadrati, telefoni, tablet e TV.
+## What it does
 
-## Requisiti
+- **Platforms, collections, search**: your RomM library as it is on the server, with covers, regions, alternate versions and an alphabet rail to jump to a letter.
+- **Installed**: what is actually on the SD card, per platform, with space used, multi-select and uninstall. The SD card never lies, unlike Stan selling used ships.
+- **Download queue**: resume after interruption, hash verification, zip extraction, one folder per game on disc-based systems, progress notification. No partial file ever lands in the frontend's folders. Not even if LeChuck pulls the plug.
+- **Automatic folder mapping**: finds the folders your launcher already has and writes into them; if something is missing, it asks once.
+- **Firmware and BIOS** from the server, downloaded into RetroArch's system folder.
+- **Gamepad first**: focus always visible, pixel-art button hints, right-stick scrolling, shortcuts for sections and the queue.
+- **LAN and remote**: a home address and a public one (Cloudflare Access supported), picked automatically depending on where you are.
+- Dark and light theme, English and Italian, layouts for 4:3 screens, square screens, phones, tablets and TV.
 
-- Un server **RomM 5.x** raggiungibile dal dispositivo.
-- **Android 8.0** (API 26) o successivo. Provata su Retroid Pocket Classic; il layout è pensato anche per RG Cube, Retroid Pocket 5, Odin 2, telefoni, tablet e Android TV. Su una nave pirata non è stata provata, ma il Wi-Fi in mare aperto è pessimo comunque.
-- Un frontend già installato tra: ES-DE, Cocoon, Daijishō, Beacon, iiSU, Pegasus, oppure una struttura di cartelle personalizzata.
+## Requirements
 
-## Installazione
+- A **RomM 5.x** server reachable from the device.
+- **Android 8.0** (API 26) or later. Tested on the Retroid Pocket Classic; the layout is also designed for the RG Cube, Retroid Pocket 5, Odin 2, phones, tablets and Android TV. Not tested on a pirate ship, but Wi-Fi on the open sea is terrible anyway.
+- A frontend already installed: ES-DE, Cocoon, Daijishō, Beacon, iiSU, Pegasus, or a custom folder layout.
 
-1. Scarica [`release/RomMMobile.apk`](release/RomMMobile.apk).
-2. Copialo sul dispositivo e aprilo (serve il permesso "installa app sconosciute" per il file manager che usi). Sconosciuta ad Android, non a te.
-3. Al primo avvio la procedura guidata ti chiede, in ordine:
-   - **Server**: l'indirizzo di RomM (`http://ip:porta` in casa, oppure il dominio HTTPS). L'app lo prova subito e mostra la versione del server.
-   - **Accesso**: utente e password, oppure un token client generato da RomM (anche via QR).
-   - **Frontend**: quale launcher usi, per sapere come chiamare le cartelle.
-   - **Cartella ROM**: la radice dove il frontend legge i giochi (ad esempio `ROMs` sulla SD).
-   - **Riepilogo**: la tabella piattaforma → cartella, già compilata con quello che ha trovato.
+## Install
 
-Tutto è modificabile in seguito da **Impostazioni**.
+1. Download [`release/RomMMobile.apk`](release/RomMMobile.apk).
+2. Copy it to the device and open it (your file manager needs the "install unknown apps" permission). Unknown to Android, not to you.
+3. On first launch the setup wizard asks, in order:
+   - **Server**: the RomM address (`http://ip:port` at home, or the HTTPS domain). It is probed right away and the server version is shown.
+   - **Sign in**: username and password, or a client token generated by RomM (QR supported).
+   - **Frontend**: which launcher you use, so folders get the right names.
+   - **ROM folder**: the root your frontend reads games from (for example `ROMs` on the SD card).
+   - **Summary**: the platform → folder table, already filled with what was found.
 
-## Comandi dal pad
+Everything can be changed later from **Settings**.
 
-| Tasto | Azione |
+## Gamepad controls
+
+| Button | Action |
 |---|---|
-| A | Apri |
-| B | Indietro (alla Home: premi due volte per uscire) |
-| X | Negli Installati: selezione multipla, poi elimina |
-| Y | Griglia / lista |
-| L1 / R1 | Sezione precedente / successiva |
-| L3 | Cerca |
-| R3 | Coda download |
-| Start / Select | Ordinamento e menu contestuale |
-| Stick destro | Scorrimento continuo |
+| A | Open |
+| B | Back (on the Home screen: press twice to exit) |
+| X | In Installed: multi-select, then delete |
+| Y | Grid / list |
+| L1 / R1 | Previous / next section |
+| L3 | Search |
+| R3 | Download queue |
+| Start / Select | Sorting and context menu |
+| Right stick | Continuous scrolling |
 
-La barra in basso mostra sempre i tasti attivi nella schermata corrente. Combattere come un contadino resta facoltativo.
+The bar at the bottom always shows the buttons that are active on the current screen. Fighting like a dairy farmer remains optional.
 
-## Struttura del repository
+## Repository layout
 
-| Percorso | Contenuto |
+| Path | Contents |
 |---|---|
-| `app/` | Sorgenti dell'app |
-| `release/` | APK corrente per il sideload |
-| `assets/platform_map.json` | Tabella di mapping piattaforme RomM → cartelle dei launcher |
+| `app/` | App sources |
+| `release/` | Current APK for sideloading |
+| `assets/platform_map.json` | Mapping table from RomM platforms to launcher folders |
 
-## Documentazione
+## Documentation
 
-L'ordine di lettura è quello dei numeri, come le tre prove per diventare pirata. Solo che qui sono sei.
+The reading order is the number order, like the three trials to become a pirate. Except here there are six. The documents are in Italian.
 
-| File | Cosa contiene |
+| File | Contents |
 |---|---|
-| [docs/01-SPEC-PRODOTTO.md](docs/01-SPEC-PRODOTTO.md) | Cosa fa l'app, cosa NON fa, flussi utente, onboarding |
-| [docs/02-UI-DESIGN-SYSTEM.md](docs/02-UI-DESIGN-SYSTEM.md) | Stile di RomM (token esatti), layout responsive, schermi quadrati, gamepad |
-| [docs/03-ARCHITETTURA.md](docs/03-ARCHITETTURA.md) | Stack, moduli, storage, motore di download |
-| [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Contratto API RomM 5.x verificato |
-| [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | Il problema delle cartelle e la sua soluzione completa |
-| [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestone, criteri di accettazione, matrice di test |
+| [docs/01-SPEC-PRODOTTO.md](docs/01-SPEC-PRODOTTO.md) | What the app does, what it does NOT do, user flows, onboarding |
+| [docs/02-UI-DESIGN-SYSTEM.md](docs/02-UI-DESIGN-SYSTEM.md) | RomM's look (exact tokens), responsive layouts, square screens, gamepad |
+| [docs/03-ARCHITETTURA.md](docs/03-ARCHITETTURA.md) | Stack, modules, storage, download engine |
+| [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Verified RomM 5.x API contract |
+| [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | The folder problem and its full solution |
+| [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestones, acceptance criteria, test matrix |
 
-## Compilare dai sorgenti
+## Building from source
 
-Servono JDK 17 e l'SDK Android con piattaforma 37 (`setup-android-sdk.ps1` lo scarica su Windows). Il Gradle wrapper è incluso.
+You need JDK 17 and the Android SDK with platform 37 (`setup-android-sdk.ps1` fetches it on Windows). The Gradle wrapper is included.
 
 ```bash
 ./gradlew :app:assembleRelease
 ```
 
-L'APK esce in `app/build/outputs/apk/release/`. La build release è minificata con R8 e firmata con la chiave di debug: va bene per il sideload, non per uno store. Il grog invece non va bene per niente: corrode il bicchiere.
+The APK lands in `app/build/outputs/apk/release/`. The release build is minified with R8 and signed with the debug key: fine for sideloading, not for a store. Grog, on the other hand, is fine for nothing: it eats through the mug.
 
 Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkHttp/Retrofit, WorkManager. Android Gradle Plugin 9.4, Gradle 9.7.
 
-## Stato
+## Status
 
-Versione **1.0.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi, pubblicazione su F-Droid.
+Version **1.0.0**, under active development. Working: library, installed shelf, downloads, folder mapping, firmware, gamepad navigation. Not yet: writing `gamelist.xml` for the frontend, syncing collections and save files, F-Droid publishing.
 
-Segnalazioni e proposte: apri una issue su questo repository. Se vedi una scimmia a tre teste dietro di te, allega uno screenshot.
+Bug reports and ideas: open an issue on this repository. If you see a three-headed monkey behind you, attach a screenshot.
 
-## Licenza
+## License
 
-[MIT](LICENSE): usala, modificala, ridistribuiscila, basta che resti il nome dell'autore. Quack.
+[MIT](LICENSE): use it, change it, share it, just keep the author's name on it. Quack.
