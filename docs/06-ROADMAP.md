@@ -1,89 +1,89 @@
-# 06 — Milestone, criteri di accettazione, test
+# 06 — Milestones, acceptance criteria, testing
 
-Ordine pensato per avere qualcosa di usabile presto e per non costruire la UI sopra fondamenta di storage sbagliate.
+The order is designed to have something usable early and to avoid building the UI on top of the wrong storage foundations.
 
-## M0 — Fondamenta
+## M0 — Foundations
 
-- Progetto Compose + Hilt + Room + DataStore, `minSdk 26`, tema RomM completo (scuro e chiaro) con i token del doc 02.
-- Client di rete: normalizzazione URL, `GET /api/heartbeat`, login (`POST /api/login`), `GET /api/users/me`, credenziali in `EncryptedSharedPreferences`, `networkSecurityConfig` per LAN in chiaro.
-- `WindowSizeClass` custom a due assi (larghezza e altezza) più rilevamento TV.
-- Schermata Diagnostica e log su file.
+- Compose + Hilt + Room + DataStore project, `minSdk 26`, complete RomM theme (dark and light) with the tokens from doc 02.
+- Network client: URL normalisation, `GET /api/heartbeat`, login (`POST /api/login`), `GET /api/users/me`, credentials in `EncryptedSharedPreferences`, `networkSecurityConfig` for cleartext LAN traffic.
+- Custom two-axis `WindowSizeClass` (width and height) plus TV detection.
+- Diagnostics screen and file logging.
 
-**Fatto quando:** ci si logga sul server dell'utente in HTTP e si vede la versione RomM; ruotando il device e in split screen non ci sono layout rotti.
+**Done when:** you can log in to the server over HTTP and see the RomM version; rotating the device and using split screen produce no broken layouts.
 
-## M1 — Navigazione della libreria
+## M1 — Library navigation
 
-- Tre sezioni: Piattaforme (griglia con icone e conteggio), Collezioni, Cerca.
-- Griglia giochi con Paging 3, copertine via Coil (priorità `path_cover_*`, fallback `url_cover`), toggle griglia/lista.
-- **AlphabetRail** alimentata da `char_index`, con salto da L2/R2.
-- Dettaglio gioco con siblings risolti solo lì.
-- Navigazione completa da gamepad: focus visibile, `focusRestorer`, mappatura del doc 02.
+- Three sections: Platforms (grid with icons and counts), Collections, Search.
+- Game grid with Paging 3, covers via Coil (`path_cover_*` first, `url_cover` as fallback), grid/list toggle.
+- **AlphabetRail** fed by `char_index`, with L2/R2 jumps.
+- Game detail with siblings resolved only there.
+- Full gamepad navigation: visible focus, `focusRestorer`, the mapping from doc 02.
 
-**Fatto quando:** si naviga una piattaforma da 1.700 titoli senza scatti e senza crash, si salta a una lettera in meno di un secondo, e tutto è raggiungibile senza toccare lo schermo.
+**Done when:** you can browse a 1,700-title platform without stutter or crashes, jump to a letter in under a second, and reach everything without touching the screen.
 
-## M2 — Onboarding, launcher e cartelle
+## M2 — Onboarding, launchers and folders
 
-- Wizard a 5 passi (doc 01), incluso il pairing QR del Client API Token.
-- `FileGateway` con le due implementazioni, richiesta di `MANAGE_EXTERNAL_STORAGE` con fallback SAF e percorso manuale.
-- Caricamento di `platform_map.json`, scoperta automatica delle cartelle esistenti, tabella di mapping modificabile.
+- 5-step wizard (doc 01), including QR pairing of the client API token.
+- `FileGateway` with its two implementations, `MANAGE_EXTERNAL_STORAGE` request with SAF fallback and manual path.
+- Loading of `platform_map.json`, automatic discovery of existing folders, editable mapping table.
 
-**Fatto quando:** su un device con ES-DE già configurato, l'app rileva da sola le cartelle esistenti e mostra la tabella completa senza chiedere niente all'utente oltre alla cartella radice.
+**Done when:** on a device with ES-DE already configured, the app detects the existing folders on its own and shows the complete table without asking the user for anything beyond the root folder.
 
-## M3 — Download
+## M3 — Downloads
 
-- Coda persistita su Room, Foreground Service con notifica, WorkManager, concorrenza configurabile.
-- Scrittura `.part` in cache privata, verifica hash, spostamento, stati completi, ripresa con Range, annullamento vero.
-- Estrazione zip in streaming, `.7z` lasciato intero per default, sottocartella per gioco sui sistemi a disco.
-- `DownloadMiniBar` e schermata Download.
-- Indice dei file locali e badge "già presente" sulle card.
+- Queue persisted in Room, Foreground Service with notification, WorkManager, configurable concurrency.
+- `.part` written to private cache, hash verification, move, complete state machine, Range-based resume, real cancellation.
+- Streaming zip extraction, `.7z` left intact by default, one folder per game on disc-based systems.
+- `DownloadMiniBar` and Downloads screen.
+- Local file index and "already on the device" badge on cards.
 
-**Fatto quando:** si scarica un gioco PSX multi-disco, il `.m3u` finisce nella sottocartella giusta, ES-DE lo vede al riavvio; uccidendo l'app a metà download e riaprendola, il download riprende dal punto in cui era.
+**Done when:** you download a multi-disc PSX game, the `.m3u` ends up in the right subfolder, ES-DE sees it on restart; killing the app mid-download and reopening it, the download resumes from where it left off.
 
-## M4 — Rifiniture
+## M4 — Polish
 
-- Collezioni virtuali (5 tipi, id stringa) e smart collection.
-- Ricerca con filtri e ordinamenti, ricerche recenti.
-- Gestione libreria locale: vedere ed eliminare ciò che si è scaricato, spazio occupato per piattaforma.
-- Localizzazione italiano e inglese, tema chiaro, impostazione "scambia A/B", schermata test input.
-- Ottimizzazione Android TV.
+- Virtual collections (5 types, string id) and smart collections.
+- Search with filters and sort orders, recent searches.
+- Local library management: view and delete what has been downloaded, space used per platform.
+- Italian and English localisation, light theme, "swap A/B" setting, input test screen.
+- Android TV optimisation.
 
-## M5 — Metadati per il frontend
+## M5 — Metadata for the frontend
 
-- Scrittura di `gamelist.xml` in formato ES-DE con fusione delle voci esistenti e scrittura atomica, solo a frontend chiuso.
-- Download delle copertine in `downloaded_media/<sistema>/covers/`.
-- Sezione BIOS/firmware con destinazione `RetroArch/system/` e nessuna sovrascrittura silenziosa.
+- Writing `gamelist.xml` in ES-DE format, merging existing entries, atomic write, only while the frontend is closed.
+- Cover download into `downloaded_media/<system>/covers/`.
+- BIOS/firmware section with `RetroArch/system/` as destination and no silent overwrite.
 
-## Dopo la v1 (non pianificato)
+## After v1 (not planned)
 
-Sync collezione verso il device (solo Wi-Fi, solo in carica), sync dei salvataggi, Cloudflare Access come impostazione di primo livello, "apri con app esterna" post-download (un semplice `ACTION_VIEW`: non ci rende un frontend, ma è comodo), deep link, pubblicazione su F-Droid.
+Collection sync to the device (Wi-Fi only, only while charging), save sync, Cloudflare Access as a top-level setting, "open with external app" after download (a plain `ACTION_VIEW`: it does not make us a frontend, but it is convenient), deep links, F-Droid publication.
 
-## Definition of done trasversale
+## Cross-cutting definition of done
 
-Vale per ogni milestone:
+Applies to every milestone:
 
-1. Nessun crash con record dell'API incompleti: campi nullable e rendering difensivo per item.
-2. Nessun blocco della UI su I/O: tutto su dispatcher IO, progressi campionati.
-3. Ogni schermata è completamente navigabile da gamepad, con focus visibile e ripristinato.
-4. Ogni schermata si comporta correttamente nelle quattro classi di layout della matrice qui sotto.
-5. Ogni errore di rete o di filesystem ha un messaggio in italiano che dice cosa è successo e cosa fare.
-6. Nessun file parziale lasciato nelle cartelle del frontend, in nessuno scenario di errore.
+1. No crash on incomplete API records: nullable fields and defensive per-item rendering.
+2. No UI blocking on I/O: everything on the IO dispatcher, sampled progress updates.
+3. Every screen is fully navigable from the gamepad, with visible and restored focus.
+4. Every screen behaves correctly in the four layout classes of the matrix below.
+5. Every network or filesystem error has a localised message that says what happened and what to do.
+6. No partial file left in the frontend folders, under any error scenario.
 
-## Matrice di test schermi
+## Screen test matrix
 
-| Profilo | Risoluzione | dp stimati | Cosa verificare |
+| Profile | Resolution | Estimated dp | What to check |
 |---|---|---|---|
-| Retroid Pocket Classic | 1240×1080 @ ~420 dpi | ~472 × 411 | rail laterale, top bar 40 dp, minimo 3 colonne, barra lettere leggibile |
-| RG Cube (1:1) | 720×720 | ~360 × 360 | caso peggiore: tutto deve entrare, niente testo troncato nella rail |
-| Handheld orizzontale (RP5, Odin 2) | 1920×1080 | ~640 × 360 | classe MEDIUM ma SHORT: rail più griglia larga, niente bottom bar |
-| Telefono | 2400×1080 | ~393 × 873 | bottom bar, 2–3 colonne, insets edge-to-edge |
-| Tablet / dock | 2560×1600 | ~1280 × 800 | due pannelli, 6–8 colonne |
-| Android TV 1080p | 1920×1080 | 960 × 540 | overscan, niente picker SAF, solo D-pad |
+| Retroid Pocket Classic | 1240×1080 @ ~420 dpi | ~472 × 411 | side rail, 40 dp top bar, at least 3 columns, readable alphabet rail |
+| RG Cube (1:1) | 720×720 | ~360 × 360 | worst case: everything must fit, no truncated text in the rail |
+| Landscape handheld (RP5, Odin 2) | 1920×1080 | ~640 × 360 | MEDIUM but SHORT class: rail plus wide grid, no bottom bar |
+| Phone | 2400×1080 | ~393 × 873 | bottom bar, 2–3 columns, edge-to-edge insets |
+| Tablet / dock | 2560×1600 | ~1280 × 800 | two panes, 6–8 columns |
+| Android TV 1080p | 1920×1080 | 960 × 540 | overscan, no SAF picker, D-pad only |
 
-Ognuno va provato anche con `fontScale` 1.3 e con la libreria vera dell'utente (18.430 ROM, 78 piattaforme).
+Each one must also be tested with `fontScale` 1.3 and with a real library of roughly 18,000 ROMs across about 80 platforms.
 
-## Decisioni ancora aperte
+## Open decisions
 
-1. **Nome pacchetto e identità app** — proposta `com.rommmobile.app`; da confermare, così come icona e nome visualizzato.
-2. **Arcade**: la libreria dell'utente usa il bestset FBNeo. Preselezionare la cartella `fbneo` quando esiste, altrimenti `arcade`: da confermare con lui al primo utilizzo reale.
-3. **`genesis` contro `megadrive`** e **`segacd` contro `megacd`**: il preset propone la variante europea; se ES-DE è già configurato con l'altra, vince comunque la scoperta automatica.
-4. **Client API Token contro login classico**: verificare sul server 5.2 dell'utente che il flusso di pairing QR sia disponibile e documentarne i passi esatti prima di implementarlo in M2.
+1. **Package name and app identity** — proposed `com.rommmobile.app`; to be confirmed, along with the icon and display name.
+2. **Arcade**: a library built on the FBNeo bestset is the reference case. Preselect the `fbneo` folder when it exists, otherwise `arcade`: to be confirmed on first real use.
+3. **`genesis` versus `megadrive`** and **`segacd` versus `megacd`**: the preset proposes the European variant; if ES-DE is already configured with the other one, automatic discovery wins anyway.
+4. **Client API token versus classic login**: verify on a RomM 5.2 server that the QR pairing flow is available and document its exact steps before implementing it in M2.

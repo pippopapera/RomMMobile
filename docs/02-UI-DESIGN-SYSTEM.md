@@ -1,175 +1,175 @@
-# 02 — Design system e UI
+# 02 — Design system and UI
 
-Obiettivo dichiarato dall'utente: **riportare lo stile della web app RomM il più fedelmente possibile**, correggendo però il suo punto debole, l'adattamento a formati anomali. Quindi: colori, tipografia e componenti si copiano; il **layout si riprogetta** per essere davvero responsive.
+Design goal: **reproduce the style of the RomM web app as faithfully as possible**, while fixing its weak spot, adaptation to unusual form factors. So: colours, typography and components are copied; the **layout is redesigned** to be truly responsive.
 
-## 1. Token colore (estratti da `rommapp/romm`, `frontend/src/styles/themes.ts` — usare questi valori esatti)
+## 1. Colour tokens (extracted from `rommapp/romm`, `frontend/src/styles/themes.ts` — use these exact values)
 
-### Tema scuro (default dell'app)
+### Dark theme (app default)
 
-| Token | Hex | Uso |
+| Token | Hex | Use |
 |---|---|---|
-| `primary` | `#8B74E8` | accento principale, focus, azioni |
-| `primary-lighten` | `#A18FFF` | anello di focus, hover, stati attivi |
-| `primary-darken` | `#6043C8` | pressed, riempimenti |
-| `secondary` | `#9E8CD6` | accento secondario |
-| `secondary-lighten` | `#EBE7FA` | testo su superfici accentate |
+| `primary` | `#8B74E8` | main accent, focus, actions |
+| `primary-lighten` | `#A18FFF` | focus ring, hover, active states |
+| `primary-darken` | `#6043C8` | pressed, fills |
+| `secondary` | `#9E8CD6` | secondary accent |
+| `secondary-lighten` | `#EBE7FA` | text on accented surfaces |
 | `secondary-darken` | `#7A6BB4` | |
-| `accent` | `#E1A38D` | evidenziazioni rare (badge speciali) |
-| `background` | `#0D1117` | sfondo schermate |
-| `surface` | `#161B22` | card, barre |
-| `toplayer` | `#1C2330` | dialog, menu, bottom sheet, mini-barra download |
+| `accent` | `#E1A38D` | rare highlights (special badges) |
+| `background` | `#0D1117` | screen background |
+| `surface` | `#161B22` | cards, bars |
+| `toplayer` | `#1C2330` | dialogs, menus, bottom sheets, download mini-bar |
 
-### Tema chiaro (opzionale, stessa struttura)
+### Light theme (optional, same structure)
 
 `primary #371F69` · `secondary #553E98` · `accent #E1A38D` · `background #F2F4F8` · `surface #FFFFFF` · `toplayer #E4E9F0` · `primary-lighten #7850E6` · `primary-darken #452788`.
 
-### Colori semantici comuni ai due temi
+### Semantic colours shared by both themes
 
-`romm-red #DA3633` (errori, download falliti) · `romm-green #3FB950` (completato, già presente) · `romm-blue #0070F3` (info, in corso) · `romm-white #FEFDFE` · `romm-gray #5D5D5D` (testo disabilitato, bordi) · `romm-black #000000` · `romm-gold #FFD700` (preferiti).
+`romm-red #DA3633` (errors, failed downloads) · `romm-green #3FB950` (completed, already on the device) · `romm-blue #0070F3` (info, in progress) · `romm-white #FEFDFE` · `romm-gray #5D5D5D` (disabled text, borders) · `romm-black #000000` · `romm-gold #FFD700` (favourites).
 
-Implementazione: `ColorScheme` Material 3 costruito a mano da questi valori (non usare dynamic color/Monet: rompe l'identità RomM). `toplayer` non esiste in M3, va esposto come token extra via `CompositionLocal`.
+Implementation: a Material 3 `ColorScheme` built by hand from these values (do not use dynamic color/Monet: it breaks the RomM identity). `toplayer` does not exist in M3; expose it as an extra token via `CompositionLocal`.
 
-## 2. Tipografia
+## 2. Typography
 
-RomM usa **Roboto** (variabile, pesi 100–900): è il font di sistema Android, quindi `FontFamily.Default` con i pesi giusti. Niente font custom da imbarcare.
+RomM uses **Roboto** (variable, weights 100–900): it is the Android system font, so `FontFamily.Default` with the right weights. No custom fonts to bundle.
 
-| Ruolo | Size / peso | Note |
+| Role | Size / weight | Notes |
 |---|---|---|
-| Titolo schermata | 20 sp / Medium | 18 sp se `heightDp < 480` |
-| Titolo sezione | 16 sp / Medium | |
-| Nome gioco (card) | 13 sp / Normal, max 2 righe, ellissi | come RomM: sotto la copertina, centrato |
-| Nome gioco (lista) | 15 sp / Normal | |
-| Metadato secondario | 12 sp / Normal, opacità 0,7 | |
-| Badge | 10 sp / Medium, maiuscolo | |
+| Screen title | 20 sp / Medium | 18 sp if `heightDp < 480` |
+| Section title | 16 sp / Medium | |
+| Game name (card) | 13 sp / Normal, max 2 lines, ellipsis | as in RomM: below the cover, centred |
+| Game name (list) | 15 sp / Normal | |
+| Secondary metadata | 12 sp / Normal, opacity 0.7 | |
+| Badge | 10 sp / Medium, uppercase | |
 
-Rispettare il `fontScale` di sistema fino a 1.3; oltre, comprimere solo il testo secondario.
+Honour the system `fontScale` up to 1.3; beyond that, compress secondary text only.
 
-## 3. Forma, spaziatura, effetti
+## 3. Shape, spacing, effects
 
-- Raggi: card copertina **8 dp**, card piattaforma **12 dp**, dialog **16 dp**, chip/badge **6 dp**, pill di stato **999 dp**.
-- Griglia di spaziatura da 4 dp; padding standard 12 dp (8 dp se `heightDp < 480`).
-- Elevazione simulata con le superfici, non con ombre pesanti: `surface` su `background`, `toplayer` su `surface`.
-- **Scala al focus 1.07** con transizione 100 ms: è esattamente la regola `.transform-scale:hover/focus` di RomM (`common.css`), qui applicata al focus da gamepad.
-- Testo sopra una copertina sempre con ombra `1px 1px 3px #000` (regola `.text-shadow` di RomM) oppure su fascia `translucent` (nero al 50%).
+- Radii: cover card **8 dp**, platform card **12 dp**, dialog **16 dp**, chip/badge **6 dp**, status pill **999 dp**.
+- 4 dp spacing grid; standard padding 12 dp (8 dp if `heightDp < 480`).
+- Elevation simulated with surfaces, not with heavy shadows: `surface` on `background`, `toplayer` on `surface`.
+- **Focus scale 1.07** with a 100 ms transition: this is exactly RomM's `.transform-scale:hover/focus` rule (`common.css`), applied here to gamepad focus.
+- Text over a cover always gets a `1px 1px 3px #000` shadow (RomM's `.text-shadow` rule) or sits on a `translucent` band (50% black).
 
-## 4. Componenti
+## 4. Components
 
 ### 4.1 PlatformCard
-Card `surface`, icona piattaforma centrata (da `{base}/assets/platforms/{slug}.ico`, fallback icona generica), nome sotto (usare `display_name` o `custom_name`, **mai solo `name`**: le piattaforme custom mostrerebbero il nome sbagliato), pill con conteggio ROM in alto a destra. Rapporto della card 1:1. Al focus: scala 1.07 più anello `primary-lighten` 2 dp.
+`surface` card, centred platform icon (from `{base}/assets/platforms/{slug}.ico`, generic icon as fallback), name below (use `display_name` or `custom_name`, **never `name` alone**: custom platforms would show the wrong name), ROM-count pill in the top right corner. Card ratio 1:1. On focus: scale 1.07 plus a 2 dp `primary-lighten` ring.
 
-### 4.2 GameCard (griglia)
-Copertina con rapporto **1 : 1,4** (larghezza : altezza), `ContentScale.Crop`, raggio 8 dp, scheletro mentre carica, nome sotto su 2 righe. Badge sovrapposti:
+### 4.2 GameCard (grid)
+Cover with a **1 : 1.4** ratio (width : height), `ContentScale.Crop`, 8 dp radius, skeleton while loading, name below on 2 lines. Overlaid badges:
 
-| Posizione | Badge |
+| Position | Badge |
 |---|---|
-| alto sinistra | regione (`US`/`EU`/`JP`) come nella web app |
-| alto destra | icona piattaforma (solo nelle viste multi-piattaforma) |
-| basso destra | numero versioni (siblings) se maggiore di 1 |
-| overlay centro | stato: già presente sul device / in download con anello di progresso / in pausa / fallito |
+| top left | region (`US`/`EU`/`JP`) as in the web app |
+| top right | platform icon (only in multi-platform views) |
+| bottom right | number of versions (siblings) if greater than 1 |
+| centre overlay | status: already on the device / downloading with progress ring / paused / failed |
 
-### 4.3 GameRow (lista)
-Altezza 56 dp: miniatura 40×56, nome, riga secondaria con `piattaforma · regione · dimensione`, stato a destra. Serve quando l'utente vuole densità (liste da migliaia di titoli).
+### 4.3 GameRow (list)
+Height 56 dp: 40×56 thumbnail, name, secondary line with `platform · region · size`, status on the right. Needed when density matters (lists of thousands of titles).
 
-### 4.4 AlphabetRail — la barra delle lettere
-Colonna verticale a destra, larghezza 28 dp (32 dp se `widthDp >= 600`), voci `# A B … Z @`, lettera corrente evidenziata con pill `primary`: identica allo screenshot della web app.
+### 4.4 AlphabetRail — the alphabet rail
+Vertical column on the right, width 28 dp (32 dp if `widthDp >= 600`), entries `# A B … Z @`, current letter highlighted with a `primary` pill: identical to the web app screenshot.
 
-- Sorgente dati: **`char_index` della risposta `/api/roms`** (mappa lettera → offset). Mai calcolarlo lato client sulla pagina corrente: la libreria è paginata.
-- Le lettere senza risultati stanno al 30% di opacità e vengono saltate durante la navigazione.
-- Da gamepad: **R2/L2** saltano alla lettera successiva/precedente senza spostare il focus sulla barra; la barra resta comunque raggiungibile col D-pad destro dalla colonna più a destra della griglia.
-- Da touch: tap e trascinamento continuo con anteprima ingrandita della lettera.
-- Il salto imposta l'offset di Paging e mostra un'etichetta fluttuante grande (48 sp) al centro per 600 ms.
+- Data source: **`char_index` from the `/api/roms` response** (letter → offset map). Never compute it client-side on the current page: the library is paginated.
+- Letters with no results sit at 30% opacity and are skipped during navigation.
+- From the gamepad: **R2/L2** jump to the next/previous letter without moving focus onto the rail; the rail remains reachable with D-pad right from the rightmost column of the grid.
+- From touch: tap and continuous drag with an enlarged preview of the letter.
+- The jump sets the Paging offset and shows a large floating label (48 sp) in the centre for 600 ms.
 
 ### 4.5 DownloadMiniBar
-Barra `toplayer` alta 44 dp ancorata sopra la navigazione, visibile solo con coda non vuota: nome file (ellissi), progresso `primary`, percentuale, velocità, contatore `+n`. Focusabile. Aggiornamento UI al massimo 2–4 volte al secondo, velocità mediata su 5 campioni.
+`toplayer` bar, 44 dp tall, anchored above the navigation, visible only when the queue is not empty: file name (ellipsis), `primary` progress, percentage, speed, `+n` counter. Focusable. UI updates at most 2–4 times per second, speed averaged over 5 samples.
 
 ### 4.6 FilterBar
-Riga sopra la griglia: ordinamento (`name`, `first_release_date`, `average_rating`, `fs_size_bytes`, `created_at`), filtri (solo non scaricati / solo scaricati / regione), toggle griglia-lista, ricerca dentro la piattaforma. Su schermi bassi diventa una riga di sole icone con i dettagli in un bottom sheet.
+Row above the grid: sorting (`name`, `first_release_date`, `average_rating`, `fs_size_bytes`, `created_at`), filters (not downloaded only / downloaded only / region), grid-list toggle, search within the platform. On short screens it becomes an icon-only row with the details in a bottom sheet.
 
-### 4.7 Stati
-Ogni lista implementa quattro stati distinti: **caricamento** (scheletri con la stessa geometria delle card, niente spinner a schermo pieno), **vuoto** (icona, frase, azione), **errore** (causa in italiano comprensibile più "Riprova" già a fuoco), **offline** (banner persistente, contenuti dalla cache).
+### 4.7 States
+Every list implements four distinct states: **loading** (skeletons with the same geometry as the cards, no full-screen spinner), **empty** (icon, sentence, action), **error** (an understandable localised cause plus a "Retry" button already focused), **offline** (persistent banner, content from the cache).
 
-## 5. Layout responsive
+## 5. Responsive layout
 
-### 5.1 Il problema da risolvere
+### 5.1 The problem to solve
 
-Non basta ragionare per larghezza. Un Retroid Pocket Classic è **472 × 411 dp** (1240×1080 a ~420 dpi): larghezza compatta ma **altezza ridicola**. Un RG Cube è circa 360 × 360 dp. Su questi schermi una top bar da 64 dp più una bottom bar da 80 dp mangiano oltre un terzo dello spazio utile. Per questo si classifica su **due assi**.
+Reasoning by width alone is not enough. A Retroid Pocket Classic is **472 × 411 dp** (1240×1080 at ~420 dpi): compact width but **an absurdly small height**. An RG Cube is about 360 × 360 dp. On these screens a 64 dp top bar plus an 80 dp bottom bar eat more than a third of the usable space. This is why classification happens on **two axes**.
 
-### 5.2 Classi
+### 5.2 Classes
 
 ```
 widthClass  : COMPACT (<600dp) | MEDIUM (600-839) | EXPANDED (>=840)
 heightClass : SHORT (<480dp)   | TALL (>=480)
 shape       : ratio = widthDp / heightDp
-              PORTRAIT (<0,9) | SQUARE (0,9-1,25) | LANDSCAPE (>1,25)
+              PORTRAIT (<0.9) | SQUARE (0.9-1.25) | LANDSCAPE (>1.25)
 isTv        : UiModeManager.currentModeType == UI_MODE_TYPE_TELEVISION
 ```
 
-### 5.3 Regole di navigazione
+### 5.3 Navigation rules
 
-| Condizione | Navigazione | Top bar |
+| Condition | Navigation | Top bar |
 |---|---|---|
-| COMPACT + TALL (telefono verticale) | **BottomNavBar** 72 dp | 56 dp, titolo più azioni |
-| `heightClass == SHORT` (RP Classic, RG Cube, handheld orizzontali) | **NavigationRail** a sinistra, 56 dp, sole icone, etichetta solo sull'elemento a fuoco | **40 dp**, solo titolo e 2 azioni |
-| MEDIUM / EXPANDED | NavigationRail 80 dp con etichette | 56 dp |
-| `isTv` | NavigationRail 96 dp, focus scalato 1.1, margine overscan 5% | 48 dp |
+| COMPACT + TALL (portrait phone) | **BottomNavBar** 72 dp | 56 dp, title plus actions |
+| `heightClass == SHORT` (RP Classic, RG Cube, landscape handhelds) | **NavigationRail** on the left, 56 dp, icons only, label only on the focused item | **40 dp**, title and 2 actions only |
+| MEDIUM / EXPANDED | NavigationRail 80 dp with labels | 56 dp |
+| `isTv` | NavigationRail 96 dp, focus scaled 1.1, 5% overscan margin | 48 dp |
 
-La rail sta **a sinistra** perché sugli handheld il pollice sinistro è sul D-pad: la navigazione fra sezioni deve stare dal lato del D-pad, mentre la barra delle lettere a destra sta dal lato dei tasti azione e dello stick destro. Questa simmetria è il motivo per cui questa disposizione batte il carosello di Argosy.
+The rail sits **on the left** because on handhelds the left thumb is on the D-pad: navigation between sections must be on the D-pad side, while the alphabet rail on the right is on the side of the action buttons and the right stick. This symmetry is why this arrangement beats Argosy's carousel.
 
-### 5.4 Griglie
+### 5.4 Grids
 
-Colonne calcolate con `GridCells.Adaptive(minCell)`, mai con numeri fissi:
+Columns computed with `GridCells.Adaptive(minCell)`, never with fixed numbers:
 
-| Contesto | `minCell` |
+| Context | `minCell` |
 |---|---|
-| copertine, `widthDp < 400` | 104 dp |
-| copertine, 400–599 | 116 dp |
-| copertine, 600–839 | 128 dp |
-| copertine, >= 840 o TV | 148 dp |
-| piattaforme | `minCell` copertine più 16 dp |
+| covers, `widthDp < 400` | 104 dp |
+| covers, 400–599 | 116 dp |
+| covers, 600–839 | 128 dp |
+| covers, >= 840 or TV | 148 dp |
+| platforms | cover `minCell` plus 16 dp |
 
-Correzioni:
-- se `heightClass == SHORT`, ridurre `minCell` di 8 dp (più colonne, meno scroll su schermo basso);
-- lo spazio della `AlphabetRail` va sottratto prima del calcolo delle colonne, mai sovrapposto;
-- limite duro: minimo 2 colonne, massimo 8.
+Corrections:
+- if `heightClass == SHORT`, reduce `minCell` by 8 dp (more columns, less scrolling on a short screen);
+- the space taken by the `AlphabetRail` is subtracted before computing the columns, never overlapped;
+- hard limit: minimum 2 columns, maximum 8.
 
-### 5.5 Due pannelli
-Con `widthClass == EXPANDED` e `shape == LANDSCAPE`, la schermata piattaforma usa due pannelli: elenco piattaforme a sinistra (280 dp), griglia giochi a destra. In tutti gli altri casi, pagine intere.
+### 5.5 Two panes
+With `widthClass == EXPANDED` and `shape == LANDSCAPE`, the platform screen uses two panes: platform list on the left (280 dp), game grid on the right. In every other case, full pages.
 
-### 5.6 Insets e schermi anomali
-- Edge-to-edge obbligatorio (Android 15 lo impone): `WindowInsets.safeDrawing` su ogni schermata, mai padding fissi per la status bar.
-- Impostazione **"Margine schermo" 0–16 dp** per handheld con angoli molto arrotondati o cornici asimmetriche e per l'overscan TV.
-- Nessuna dipendenza dallo stato `hover`: su TV e handheld non esiste.
-- Testare anche a schermo ruotato: gli handheld verticali vengono usati in orizzontale nel dock.
+### 5.6 Insets and unusual screens
+- Edge-to-edge is mandatory (Android 15 enforces it): `WindowInsets.safeDrawing` on every screen, never fixed padding for the status bar.
+- **"Screen margin" setting, 0–16 dp**, for handhelds with heavily rounded corners or asymmetric bezels and for TV overscan.
+- No dependency on the `hover` state: it does not exist on TV and handhelds.
+- Test with the screen rotated too: portrait handhelds are used in landscape when docked.
 
 ## 6. Gamepad
 
-### 6.1 Mappatura
+### 6.1 Mapping
 
-| Input | Azione |
+| Input | Action |
 |---|---|
-| D-pad / stick sinistro | sposta il focus (stick con deadzone 0,5, ripetizione ogni 120 ms) |
-| Stick destro | scroll continuo della lista |
-| A (`BUTTON_A`) | conferma / apri |
-| B (`BUTTON_B`) | indietro |
-| X (`BUTTON_X`) | **scarica** l'elemento a fuoco |
-| Y (`BUTTON_Y`) | commuta griglia / lista |
-| L1 / R1 | sezione precedente / successiva (Piattaforme, Collezioni, Cerca) |
-| L2 / R2 | lettera precedente / successiva (`char_index`) |
-| L3 | apri ricerca |
-| R3 | apri schermata Download |
-| Start | menu contestuale dell'elemento a fuoco |
-| Select | filtri e ordinamento |
+| D-pad / left stick | move focus (stick with 0.5 deadzone, repeat every 120 ms) |
+| Right stick | continuous list scrolling |
+| A (`BUTTON_A`) | confirm / open |
+| B (`BUTTON_B`) | back |
+| X (`BUTTON_X`) | **download** the focused item |
+| Y (`BUTTON_Y`) | toggle grid / list |
+| L1 / R1 | previous / next section (Platforms, Collections, Search) |
+| L2 / R2 | previous / next letter (`char_index`) |
+| L3 | open search |
+| R3 | open the Downloads screen |
+| Start | context menu for the focused item |
+| Select | filters and sorting |
 
-Impostazione **"Scambia A/B"** (layout Nintendo contro Xbox), default Xbox, con rilevamento del device dove possibile. Serve anche una schermata di test input che mostri i keycode ricevuti: gli handheld cinesi mappano male e l'utente deve poterlo diagnosticare da solo.
+**"Swap A/B"** setting (Nintendo versus Xbox layout), Xbox by default, with device detection where possible. An input test screen showing the received keycodes is also needed: Chinese handhelds map buttons badly and users must be able to diagnose it on their own.
 
-### 6.2 Regole di focus
+### 6.2 Focus rules
 
-- Ogni elemento interattivo è focusabile e ha un indicatore visibile: anello `primary-lighten` 2 dp più scala 1.07. Mai affidarsi al solo colore.
-- `Modifier.focusRestorer()` su ogni lista: tornando indietro il focus ricade sull'elemento da cui si è usciti, mai in cima.
-- Il focus non deve mai finire in un vicolo cieco: navigazione direzionale esplicita (`focusProperties { left = ...; right = ... }`) fra rail, contenuto e barra lettere.
-- L'elemento a fuoco viene sempre portato in vista con almeno una riga di margine (`bringIntoViewRequester`).
-- Tasto tenuto premuto: primo ritardo 400 ms, poi 60 ms; dopo 1,5 s di pressione continua sulla griglia si passa allo **scroll a pagine** invece che a righe.
-- All'apertura di dialog e bottom sheet il focus entra dentro e non ne esce se non con B.
+- Every interactive element is focusable and has a visible indicator: 2 dp `primary-lighten` ring plus scale 1.07. Never rely on colour alone.
+- `Modifier.focusRestorer()` on every list: when going back, focus lands on the item that was left, never at the top.
+- Focus must never end up in a dead end: explicit directional navigation (`focusProperties { left = ...; right = ... }`) between rail, content and alphabet rail.
+- The focused item is always brought into view with at least one row of margin (`bringIntoViewRequester`).
+- Held button: first delay 400 ms, then 60 ms; after 1.5 s of continuous pressing on the grid, switch to **page scrolling** instead of row scrolling.
+- When a dialog or bottom sheet opens, focus enters it and leaves only with B.
 
-### 6.3 Criterio di verifica
-Requisito di accettazione: **completare onboarding, scaricare un gioco e aprire la coda senza toccare lo schermo**, su un device con soli controlli fisici.
+### 6.3 Acceptance criterion
+Acceptance requirement: **complete onboarding, download a game and open the queue without touching the screen**, on a device with physical controls only.

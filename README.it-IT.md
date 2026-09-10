@@ -62,16 +62,16 @@ La barra in basso mostra sempre i tasti attivi nella schermata corrente. Combatt
 
 ## Documentazione
 
-L'ordine di lettura è quello dei numeri, come le tre prove per diventare pirata. Solo che qui sono sei.
+L'ordine di lettura è quello dei numeri, come le tre prove per diventare pirata. Solo che qui sono sei. La versione inglese è in `docs/`.
 
 | File | Cosa contiene |
 |---|---|
-| [docs/01-SPEC-PRODOTTO.md](docs/01-SPEC-PRODOTTO.md) | Cosa fa l'app, cosa NON fa, flussi utente, onboarding |
-| [docs/02-UI-DESIGN-SYSTEM.md](docs/02-UI-DESIGN-SYSTEM.md) | Stile di RomM (token esatti), layout responsive, schermi quadrati, gamepad |
-| [docs/03-ARCHITETTURA.md](docs/03-ARCHITETTURA.md) | Stack, moduli, storage, motore di download |
-| [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Contratto API RomM 5.x verificato |
-| [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | Il problema delle cartelle e la sua soluzione completa |
-| [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestone, criteri di accettazione, matrice di test |
+| [docs/it/01-SPEC-PRODOTTO.md](docs/it/01-SPEC-PRODOTTO.md) | Cosa fa l'app, cosa NON fa, flussi utente, onboarding |
+| [docs/it/02-UI-DESIGN-SYSTEM.md](docs/it/02-UI-DESIGN-SYSTEM.md) | Stile di RomM (token esatti), layout responsive, schermi quadrati, gamepad |
+| [docs/it/03-ARCHITETTURA.md](docs/it/03-ARCHITETTURA.md) | Stack, moduli, storage, motore di download |
+| [docs/it/04-API-ROMM.md](docs/it/04-API-ROMM.md) | Contratto API RomM 5.x verificato |
+| [docs/it/05-LAUNCHER-MAPPING.md](docs/it/05-LAUNCHER-MAPPING.md) | Il problema delle cartelle e la sua soluzione completa |
+| [docs/it/06-ROADMAP.md](docs/it/06-ROADMAP.md) | Milestone, criteri di accettazione, matrice di test |
 
 ## Compilare dai sorgenti
 

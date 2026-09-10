@@ -1,69 +1,69 @@
-# 05 — Launcher, cartelle e mapping delle piattaforme
+# 05 — Launchers, folders and platform mapping
 
-Questo è il cuore del progetto: **è il problema che l'app esiste per risolvere**.
+This is the heart of the project: **it is the problem the app exists to solve**.
 
-## 1. Il problema
+## 1. The problem
 
-RomM organizza la libreria come `library/roms/<slug>/`, dove lo slug segue la nomenclatura IGDB (`sms`, `genesis`, `neo-geo-pocket-color`, `sega32`, `zxs`…). Ogni frontend Android usa invece le proprie convenzioni: ES-DE vuole `mastersystem`, `megadrive`, `ngpc`, `sega32x`, `zxspectrum`; Daijishō, Beacon e iiSU lasciano scegliere all'utente una cartella per piattaforma, quindi la convenzione è quella che l'utente si è costruito nel tempo.
+RomM organises the library as `library/roms/<slug>/`, where the slug follows the IGDB naming (`sms`, `genesis`, `neo-geo-pocket-color`, `sega32`, `zxs`…). Every Android frontend uses its own conventions instead: ES-DE expects `mastersystem`, `megadrive`, `ngpc`, `sega32x`, `zxspectrum`; Daijishō, Beacon and iiSU let the user pick one folder per platform, so the convention is whatever the user has built up over time.
 
-Risultato con qualunque client generico: a ogni download l'app chiede dove mettere il file, oppure lo mette in una cartella che il frontend non guarda. L'utente vuole che questo **sparisca completamente**.
+The result with any generic client: on every download the app asks where to put the file, or it puts it in a folder the frontend does not watch. This must **disappear completely**.
 
-## 2. Soluzione: risoluzione a cascata
+## 2. Solution: cascading resolution
 
-Per ogni piattaforma, la cartella di destinazione si risolve in quest'ordine e il risultato si memorizza in `FolderMappingEntity`:
+For each platform, the destination folder is resolved in this order and the result is stored in `FolderMappingEntity`:
 
-1. **Override utente** (`source = USER`) — vince sempre, non viene mai riscritto in automatico.
-2. **Cartella già esistente sul device** (`source = DISCOVERED`) — si elencano le sottocartelle della radice ROM e si confrontano con gli alias della piattaforma, senza distinzione di maiuscole e ignorando spazi, trattini e underscore. È il caso più frequente: chi ha già un frontend configurato ha già le cartelle giuste.
-3. **Preset del launcher scelto** (`source = PRESET`) — dal `platform_map.json`, campo del launcher selezionato in onboarding.
-4. **Creazione** (`source = CREATED`) — se non esiste nulla, si propone la cartella del preset con un dialog a conferma singola. Solo qui l'utente vede una domanda, e una volta sola per piattaforma.
+1. **User override** (`source = USER`) — always wins, never rewritten automatically.
+2. **Folder already present on the device** (`source = DISCOVERED`) — the subfolders of the ROM root folder are listed and compared with the platform aliases, case-insensitively and ignoring spaces, hyphens and underscores. This is the most frequent case: anyone with a frontend already configured already has the right folders.
+3. **Preset of the selected launcher** (`source = PRESET`) — from `platform_map.json`, the field of the launcher selected during onboarding.
+4. **Creation** (`source = CREATED`) — if nothing exists, the preset folder is proposed with a single-confirmation dialog. This is the only place where the user sees a question, and only once per platform.
 
-Regole aggiuntive:
+Additional rules:
 
-- La corrispondenza a più candidati (es. esistono sia `megadrive` sia `genesis`) va risolta chiedendo una volta, mostrando quante ROM contiene ciascuna cartella: la più popolata è preselezionata.
-- Il mapping è **modificabile in ogni momento** da Impostazioni → Cartelle piattaforme, con una tabella `piattaforma → cartella → numero di file trovati`.
-- Cambiare launcher in un secondo momento **non cancella** gli override utente: rilancia solo la fase 2 e 3.
+- A match against multiple candidates (e.g. both `megadrive` and `genesis` exist) is resolved by asking once, showing how many ROMs each folder contains: the most populated one is preselected.
+- The mapping is **editable at any time** from Settings → Platform folders, with a table `platform → folder → number of files found`.
+- Switching launcher later **does not erase** user overrides: it only re-runs phases 2 and 3.
 
-### Pseudocodice
+### Pseudocode
 
 ```kotlin
 fun resolveFolder(platform: Platform): FolderMapping? {
     userOverride(platform.slug)?.let { return it }
-    val entry = platformMap[platform.slug]              // può essere null
+    val entry = platformMap[platform.slug]              // may be null
     val aliases = buildSet {
         add(platform.slug)
         entry?.let { addAll(listOfNotNull(it.esde) + it.esdeAlt + it.aliases) }
-    }.map(::normalize)                                   // lowercase, via spazi/-/_
+    }.map(::normalize)                                   // lowercase, strip spaces/-/_
     val existing = fileGateway.list(root).filter { it.isDirectory }
     val hits = existing.filter { normalize(it.name) in aliases }
     when {
         hits.size == 1 -> return save(platform.slug, hits.first(), DISCOVERED)
-        hits.size > 1  -> return askUser(hits)            // preselezione: più file dentro
+        hits.size > 1  -> return askUser(hits)            // preselection: most files inside
     }
     val preset = entry?.folderFor(selectedLauncher) ?: platform.slug
-    return proposeCreate(preset)                          // conferma singola
+    return proposeCreate(preset)                          // single confirmation
 }
 ```
 
-## 3. Launcher supportati
+## 3. Supported launchers
 
-| Launcher | Radice tipica | Convenzione cartelle | Metadati | Affidabilità del preset |
+| Launcher | Typical root folder | Folder convention | Metadata | Preset reliability |
 |---|---|---|---|---|
-| **ES-DE** | `/storage/emulated/0/ROMs` | **fissa e nota** (`snes`, `megadrive`, `gc`…), minuscolo | `ES-DE/gamelists/<sys>/gamelist.xml` + `ES-DE/downloaded_media/<sys>/` | alta: mappata da `es_systems.xml` ufficiale |
-| **Cocoon** | come ES-DE | importa nativamente la struttura ES-DE (ES-DE Migration/Link) | formato ES-DE | alta: eredita il preset ES-DE |
-| **Daijishō** | `/storage/emulated/0/Roms` (varia) | **definita dall'utente**: ogni piattaforma ha uno o più "sync path" | database interno, scraping proprio | media: si propone il nome breve comune, si conta sulla scoperta automatica |
-| **Beacon** | variabile | definita dall'utente, una cartella per piattaforma | interni | media |
-| **iiSU** | variabile; asset in `/storage/emulated/0/Android/media/com.iisulauncher/iiSULauncher/assets/` | definita dall'utente; sa importare i metadati ES-DE | asset gestiti a mano dall'utente | media |
-| **Pegasus** | variabile | definita dall'utente | `metadata.pegasus.txt` per cartella | media |
-| **Dig** | variabile | definita dall'utente | interni | bassa (progetto fermo) |
-| **Personalizzato / solo RetroArch** | scelta libera | slug RomM invariato | nessuno | — |
+| **ES-DE** | `/storage/emulated/0/ROMs` | **fixed and known** (`snes`, `megadrive`, `gc`…), lowercase | `ES-DE/gamelists/<sys>/gamelist.xml` + `ES-DE/downloaded_media/<sys>/` | high: mapped from the official `es_systems.xml` |
+| **Cocoon** | same as ES-DE | natively imports the ES-DE structure (ES-DE Migration/Link) | ES-DE format | high: inherits the ES-DE preset |
+| **Daijishō** | `/storage/emulated/0/Roms` (varies) | **user-defined**: each platform has one or more "sync paths" | internal database, own scraping | medium: the common short name is proposed, relying on automatic discovery |
+| **Beacon** | variable | user-defined, one folder per platform | internal | medium |
+| **iiSU** | variable; assets in `/storage/emulated/0/Android/media/com.iisulauncher/iiSULauncher/assets/` | user-defined; can import ES-DE metadata | assets managed by hand by the user | medium |
+| **Pegasus** | variable | user-defined | `metadata.pegasus.txt` per folder | medium |
+| **Dig** | variable | user-defined | internal | low (project inactive) |
+| **Custom / RetroArch only** | free choice | RomM slug unchanged | none | — |
 
-Per i launcher con convenzione libera il preset usa il **nome breve comune** (colonna `generic` del `platform_map.json`, che coincide quasi sempre con lo slug RomM): tanto il caso reale è che l'utente abbia già le cartelle, quindi vince la scoperta automatica.
+For launchers with a free convention the preset uses the **common short name** (the `generic` column of `platform_map.json`, which almost always matches the RomM slug): in practice the user already has the folders, so automatic discovery wins.
 
-**Da verificare sul device al primo avvio, non dare per scontato:** ES-DE su Android chiede la cartella ROM al primo avvio e l'utente può averla messa su SD (`/storage/XXXX-XXXX/ROMs`). L'app deve cercare la radice anche sulla scheda SD e proporre entrambe.
+**To verify on the device at first launch, do not take it for granted:** ES-DE on Android asks for the ROM folder at first launch and the user may have put it on the SD card (`/storage/XXXX-XXXX/ROMs`). The app must also look for the root folder on the SD card and propose both.
 
 ## 4. `platform_map.json`
 
-File in `app/src/main/assets/platform_map.json` (copia in `assets/` di questo repo). Struttura:
+File in `app/src/main/assets/platform_map.json` (copy in `assets/` of this repo). Structure:
 
 ```json
 {
@@ -81,28 +81,28 @@ File in `app/src/main/assets/platform_map.json` (copia in `assets/` di questo re
 }
 ```
 
-- `slug`: slug RomM/IGDB. Le voci coprono le 78 piattaforme realmente presenti nella libreria dell'utente più le più comuni non ancora presenti.
-- `esde`: cartella ES-DE ufficiale, estratta da `resources/systems/android/es_systems.xml` del repo ES-DE.
-- `esdeAlt`: alternative accettate da ES-DE (varianti regionali come `genesis`/`megadrive`, `segacd`/`megacd`, `tg16`/`pcengine`): valgono come alias in scoperta.
-- `esde: null` significa che ES-DE non ha quel sistema: l'app usa `generic`, avvisa l'utente che il frontend potrebbe non mostrarlo e non tratta la cosa come errore.
-- Il file **non è autorevole sull'elenco delle piattaforme**: quello arriva da `GET /api/platforms`. Uno slug sconosciuto non è un errore, si ricade su `slug` e sulla scoperta automatica.
-- Il file deve poter essere aggiornato senza ricompilare: previsto override in `Android/data/<pkg>/files/platform_map.json` letto se presente.
+- `slug`: RomM/IGDB slug. The entries cover the roughly 80 platforms actually present in a real library plus the most common ones not present yet.
+- `esde`: official ES-DE folder, extracted from `resources/systems/android/es_systems.xml` in the ES-DE repo.
+- `esdeAlt`: alternatives accepted by ES-DE (regional variants such as `genesis`/`megadrive`, `segacd`/`megacd`, `tg16`/`pcengine`): they count as aliases during discovery.
+- `esde: null` means ES-DE does not have that system: the app uses `generic`, warns the user that the frontend might not show it and does not treat it as an error.
+- The file **is not authoritative on the list of platforms**: that comes from `GET /api/platforms`. An unknown slug is not an error; the app falls back to `slug` and to automatic discovery.
+- The file must be updatable without recompiling: an override in `Android/data/<pkg>/files/platform_map.json` is planned, read if present.
 
-## 5. Regole sui file scaricati
+## 5. Rules for downloaded files
 
-1. **Nome invariato**: si usa `fs_name` del server. È già No-Intro/Redump e ogni frontend ci fa lo scraping sopra.
-2. **Archivi**: `.zip` estratto di default; `.7z` lasciato intero di default (ES-DE e RetroArch lo leggono; estrarlo peggiora e basta). Entrambi i comportamenti sono impostabili, anche per singola piattaforma.
-3. **Giochi multi-file / multi-disco**: RomM li serve come zip al volo contenente un `.m3u`. Destinazione: **sottocartella per gioco** dentro la cartella di piattaforma (`ROMs/psx/Final Fantasy VII/` con dentro i `.chd`/`.bin`/`.cue` e il `.m3u`). ES-DE gestisce correttamente sia il `.m3u` nella cartella di sistema sia la sottocartella; il `.m3u` va comunque lasciato dove il frontend lo vede. Comportamento configurabile per piattaforma (`flat` o `folder-per-game`), default `folder-per-game` per psx, ps2, saturn, segacd, dreamcast, pcenginecd, 3do, neogeocd.
-4. **Nessun file parziale** nella cartella del frontend: si scrive in cache privata, si verifica, si sposta.
-5. **Duplicati**: se esiste già un file con lo stesso nome (o la versione estratta o compressa dello stesso nome), il download viene marcato "già presente" e saltato, con possibilità di forzare.
-6. **BIOS/firmware**: sezione separata. Sorgente `GET /api/firmware`, destinazione **`RetroArch/system/`** (percorso configurabile), non le cartelle di piattaforma. L'utente ha già un pack BIOS completo per RetroArch: la funzione serve solo a colmare i buchi, quindi mai sovrascrivere un file esistente senza chiedere.
+1. **Unchanged name**: the server's `fs_name` is used. It is already No-Intro/Redump and every frontend scrapes on top of it.
+2. **Archives**: `.zip` is extracted by default; `.7z` is left intact by default (ES-DE and RetroArch read it; extracting it only makes things worse). Both behaviours are configurable, also per platform.
+3. **Multi-file / multi-disc games**: RomM serves them as an on-the-fly zip containing an `.m3u`. Destination: **one folder per game** inside the platform folder (`ROMs/psx/Final Fantasy VII/` containing the `.chd`/`.bin`/`.cue` files and the `.m3u`). ES-DE correctly handles both the `.m3u` in the system folder and the subfolder; the `.m3u` must in any case be left where the frontend sees it. Behaviour configurable per platform (`flat` or `folder-per-game`), default `folder-per-game` for psx, ps2, saturn, segacd, dreamcast, pcenginecd, 3do, neogeocd.
+4. **No partial files** in the frontend folder: write to the private cache, verify, move.
+5. **Duplicates**: if a file with the same name (or the extracted or compressed version of the same name) already exists, the download is marked "already on the device" and skipped, with the option to force it.
+6. **BIOS/firmware**: separate section. Source `GET /api/firmware`, destination **`RetroArch/system/`** (configurable path), not the platform folders. Users typically already have a complete BIOS pack for RetroArch: the feature only serves to fill the gaps, so never overwrite an existing file without asking.
 
-## 6. Metadati per il frontend (post-v1, milestone M4)
+## 6. Metadata for the frontend (post-v1, milestone M4)
 
-Nessun frontend Android espone un'API per registrare un gioco. Il contratto universale è: **file con l'estensione giusta nella cartella osservata, più una nuova scansione del frontend**. ES-DE riscansiona a ogni avvio.
+No Android frontend exposes an API to register a game. The universal contract is: **a file with the right extension in the watched folder, plus a new scan by the frontend**. ES-DE rescans at every launch.
 
-Per andare oltre (copertine e descrizioni senza far scrapare il frontend) il formato di riferimento è quello **ES-DE**, perché Cocoon lo importa e iiSU sa leggerlo:
+To go further (covers and descriptions without making the frontend scrape) the reference format is the **ES-DE** one, because Cocoon imports it and iiSU can read it:
 
-- `ES-DE/gamelists/<sistema>/gamelist.xml` — voci `<game>` con `<path>`, `<name>`, `<desc>`, `<releasedate>`, `<developer>`, `<publisher>`, `<genre>`, `<image>`.
-- `ES-DE/downloaded_media/<sistema>/covers/<nome file ROM>.jpg` e `screenshots/`, associazione **per nome del file ROM**.
-- **Scrivere il `gamelist.xml` solo a ES-DE chiuso** e sempre con scrittura atomica (file temporaneo più rinomina), fondendo le voci esistenti invece di sovrascrivere il file.
+- `ES-DE/gamelists/<system>/gamelist.xml` — `<game>` entries with `<path>`, `<name>`, `<desc>`, `<releasedate>`, `<developer>`, `<publisher>`, `<genre>`, `<image>`.
+- `ES-DE/downloaded_media/<system>/covers/<ROM file name>.jpg` and `screenshots/`, association **by ROM file name**.
+- **Write `gamelist.xml` only while ES-DE is closed** and always with an atomic write (temporary file plus rename), merging the existing entries instead of overwriting the file.

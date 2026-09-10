@@ -62,14 +62,14 @@ The bar at the bottom always shows the buttons that are active on the current sc
 
 ## Documentation
 
-The reading order is the number order, like the three trials to become a pirate. Except here there are six. The documents are in Italian.
+The reading order is the number order, like the three trials to become a pirate. Except here there are six. Italian originals live in `docs/it/`.
 
 | File | Contents |
 |---|---|
-| [docs/01-SPEC-PRODOTTO.md](docs/01-SPEC-PRODOTTO.md) | What the app does, what it does NOT do, user flows, onboarding |
+| [docs/01-PRODUCT-SPEC.md](docs/01-PRODUCT-SPEC.md) | What the app does, what it does NOT do, user flows, onboarding |
 | [docs/02-UI-DESIGN-SYSTEM.md](docs/02-UI-DESIGN-SYSTEM.md) | RomM's look (exact tokens), responsive layouts, square screens, gamepad |
-| [docs/03-ARCHITETTURA.md](docs/03-ARCHITETTURA.md) | Stack, modules, storage, download engine |
-| [docs/04-API-ROMM.md](docs/04-API-ROMM.md) | Verified RomM 5.x API contract |
+| [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md) | Stack, modules, storage, download engine |
+| [docs/04-ROMM-API.md](docs/04-ROMM-API.md) | Verified RomM 5.x API contract |
 | [docs/05-LAUNCHER-MAPPING.md](docs/05-LAUNCHER-MAPPING.md) | The folder problem and its full solution |
 | [docs/06-ROADMAP.md](docs/06-ROADMAP.md) | Milestones, acceptance criteria, test matrix |
 
