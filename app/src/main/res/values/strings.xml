@@ -74,6 +74,7 @@
     <string name="hint_more">More</string>
     <string name="hint_view_list">List</string>
     <string name="hint_view_grid">Grid</string>
+    <string name="hint_search">Search</string>
 
     <!-- folder dialogs -->
     <string name="folder_create_title">Folder for %s</string>
@@ -115,10 +116,12 @@
 
     <!-- search -->
     <string name="search_placeholder">Search the whole library</string>
+    <string name="search_in_placeholder">Search in %s</string>
     <string name="search_hint_title">Search</string>
     <string name="search_hint_body">Type at least two characters. Results come from the server across every platform.</string>
     <string name="search_recent">Recent</string>
     <string name="search_no_results">Nothing found for “%s”</string>
+    <string name="search_no_results_offline">Offline: only the pages already cached were searched. Connect to search the whole folder.</string>
 
     <!-- downloads -->
     <string name="dl_subtitle">%1$d active · %2$d waiting</string>

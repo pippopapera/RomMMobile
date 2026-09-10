@@ -65,6 +65,12 @@ data class LibraryUiState(
     val regions: List<String> = emptyList(),
     val offline: Boolean = false,
     val searchTerm: String = "",
+    /**
+     * The term the list on screen was built for ("" when none), set only once that pager's first
+     * page has landed. The screen compares it with [searchTerm] to know whether the results it is
+     * looking at are the ones the user typed, or still on their way.
+     */
+    val appliedTerm: String = "",
 ) {
     /** The alphabet rail only makes sense for the server's name order without client filters. */
     val railAvailable: Boolean get() = sort == SortField.NAME && !descending && presenceFilter == PresenceFilter.ALL && !offline
@@ -121,6 +127,7 @@ class LibraryViewModel @AssistedInject constructor(
         }.sample(250).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val searchTerm = MutableStateFlow("")
+    private var metaGen = 0
 
     private val query: Flow<LibraryQuery> = combine(
         _state.map { Triple(it.sort, it.descending, it.regions) }.distinctUntilChanged(),
@@ -140,13 +147,28 @@ class LibraryViewModel @AssistedInject constructor(
         Triple(q, filter, offline)
     }.flatMapLatest { (q, filter, offline) ->
         if (source == LibrarySource.Search && q.searchTerm == null) return@flatMapLatest flowOf(PagingData.empty())
+        // Cancelling the previous pager does not stop a response already in flight from calling
+        // back: without the generation check a slow full-folder page landed after a search had
+        // reset meta and put "1500 games" over three results.
+        val gen = ++metaGen
         _meta.value = LibraryMeta()
         // filter() cannot remove placeholder slots, so a pager that will be filtered must not make
         // any: they would survive as skeleton cards that never resolve, and keep the unfiltered
         // item count that feeds focus and the letter jumps.
         val placeholders = filter == PresenceFilter.ALL
-        if (offline && source is LibrarySource.ByPlatform) roms.offlinePager(source.platformId, placeholders)
-        else roms.pager(q, placeholders = placeholders) { m -> _meta.value = m }
+        val applied = q.searchTerm.orEmpty()
+        if (offline && source is LibrarySource.ByPlatform) {
+            // Room answers within the frame: no first-page moment worth waiting for.
+            _state.update { it.copy(appliedTerm = applied) }
+            roms.offlinePager(source.platformId, placeholders, q.searchTerm)
+        } else {
+            roms.pager(q, placeholders = placeholders) { m ->
+                if (gen == metaGen) {
+                    _meta.value = m
+                    _state.update { it.copy(appliedTerm = applied) }
+                }
+            }
+        }
     }.cachedIn(viewModelScope)
 
     /**

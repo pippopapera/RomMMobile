@@ -157,7 +157,7 @@ fun Modifier.gamepadFocusRow(shape: Shape): Modifier = composed {
  * inside the field. This moves focus out instead, and draws the usual ring.
  */
 @OptIn(ExperimentalLayoutApi::class)
-fun Modifier.gamepadTextField(shape: Shape, ringWidthDp: Int = 2): Modifier = composed {
+fun Modifier.gamepadTextField(shape: Shape, ringWidthDp: Int = 2, onDismissed: (() -> Unit)? = null): Modifier = composed {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.isImeVisible
@@ -173,6 +173,8 @@ fun Modifier.gamepadTextField(shape: Shape, ringWidthDp: Int = 2): Modifier = co
             if (event.type == KeyEventType.KeyDown) {
                 keyboard?.hide()
                 focusManager.clearFocus()
+                // The owner may want to send the pad somewhere now that focus sits on nothing.
+                onDismissed?.invoke()
             }
             true
         }

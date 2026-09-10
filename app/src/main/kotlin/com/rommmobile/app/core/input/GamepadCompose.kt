@@ -50,12 +50,13 @@ fun ModalScope() {
     }
 }
 
-/** Actions that must not fire while a dialog or sheet owns the screen. */
-fun GamepadBus.isMuted(action: GamepadAction): Boolean = modalDepth > 0 && when (action) {
-    GamepadAction.DOWNLOAD, GamepadAction.TOGGLE_VIEW, GamepadAction.PREV_SECTION, GamepadAction.NEXT_SECTION,
-    GamepadAction.OPEN_SEARCH, GamepadAction.OPEN_DOWNLOADS, GamepadAction.FILTERS -> true
-    GamepadAction.CONTEXT_MENU -> false
-}
+/**
+ * No shortcut fires while a dialog or sheet owns the screen. Select included: it opens a text
+ * field on a library and a row menu on Downloads, and neither belongs under a modal (left live,
+ * it slipped the search field under the sort dialog).
+ */
+@Suppress("UNUSED_PARAMETER")
+fun GamepadBus.isMuted(action: GamepadAction): Boolean = modalDepth > 0
 
 /**
  * Continuous scroll driven by the right analog stick. Speed grows with the square of the

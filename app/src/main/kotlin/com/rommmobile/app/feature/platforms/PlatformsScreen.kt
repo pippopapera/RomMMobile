@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -367,11 +368,25 @@ private fun TwoPane(platforms: List<Platform>, base: String?, onOpenGame: (Int) 
             }
         }
         if (selected != null) {
-            val vm = libraryViewModel(LibrarySource.ByPlatform(selected.id, selected.slug))
-            var showSort by remember { mutableStateOf(false) }
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                Text(selected.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
-                LibraryContent(vm = vm, modifier = Modifier.weight(1f), showPlatform = false, onOpenGame = onOpenGame, onOpenDownloads = onOpenDownloads, showSort = showSort, onShowSort = { showSort = it }, handleDownloadsShortcut = false)
+            // Keyed on the platform: the pane's remembered state (search text, open flag, focus
+            // bookkeeping) must not follow the user from one folder to the next.
+            key(selected.id) {
+                val vm = libraryViewModel(LibrarySource.ByPlatform(selected.id, selected.slug))
+                var showSort by remember { mutableStateOf(false) }
+                var searchOpen by rememberSaveable { mutableStateOf(false) }
+                // Every platform keeps its own ViewModel for as long as Home lives, term included.
+                // Clicking another platform mid-search would otherwise leave this one silently
+                // filtered, with the field gone, the next time it is shown.
+                DisposableEffect(vm) { onDispose { vm.setSearchTerm("") } }
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    Text(selected.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                    // Pad-only here, like sort and view in this pane: Select opens it.
+                    LibraryContent(
+                        vm = vm, modifier = Modifier.weight(1f), showPlatform = false, onOpenGame = onOpenGame, onOpenDownloads = onOpenDownloads,
+                        showSort = showSort, onShowSort = { showSort = it }, handleDownloadsShortcut = false,
+                        searchPlaceholder = stringResource(R.string.search_in_placeholder, selected.name), searchOpen = searchOpen, onSearchOpen = { searchOpen = it },
+                    )
+                }
             }
         }
     }

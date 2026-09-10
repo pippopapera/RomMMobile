@@ -53,6 +53,10 @@ interface RomDao {
     @Query("SELECT * FROM roms WHERE platformId = :platformId ORDER BY name COLLATE NOCASE, id")
     fun pagingByPlatform(platformId: Int): PagingSource<Int, RomEntity>
 
+    /** Offline search inside one platform; [pattern] is already wrapped in % and escaped with a backslash. */
+    @Query("SELECT * FROM roms WHERE platformId = :platformId AND name LIKE :pattern ESCAPE '\\' ORDER BY name COLLATE NOCASE, id")
+    fun pagingByPlatformLike(platformId: Int, pattern: String): PagingSource<Int, RomEntity>
+
     @Query("SELECT COUNT(*) FROM roms WHERE platformId = :platformId")
     suspend fun countByPlatform(platformId: Int): Int
 

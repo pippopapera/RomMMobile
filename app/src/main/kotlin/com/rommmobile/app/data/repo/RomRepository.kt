@@ -71,9 +71,14 @@ class RomRepository @Inject constructor(
     }
 
     /** Offline fallback: whatever we cached for that platform, sorted by name. */
-    fun offlinePager(platformId: Int, placeholders: Boolean = true): Flow<PagingData<Rom>> =
-        Pager(PagingConfig(pageSize = PAGE, enablePlaceholders = placeholders)) { dao.pagingByPlatform(platformId) }
-            .flow.map { data -> data.map { it.toModel(base, json) } }
+    fun offlinePager(platformId: Int, placeholders: Boolean = true, term: String? = null): Flow<PagingData<Rom>> =
+        Pager(PagingConfig(pageSize = PAGE, enablePlaceholders = placeholders)) {
+            val t = term?.trim().orEmpty()
+            if (t.isEmpty()) dao.pagingByPlatform(platformId) else dao.pagingByPlatformLike(platformId, "%" + likeEscape(t) + "%")
+        }.flow.map { data -> data.map { it.toModel(base, json) } }
+
+    /** A search term is text, not a pattern: its wildcards are quoted for LIKE ... ESCAPE '\\'. */
+    private fun likeEscape(s: String): String = s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     suspend fun cachedCount(platformId: Int): Int = dao.countByPlatform(platformId)
 

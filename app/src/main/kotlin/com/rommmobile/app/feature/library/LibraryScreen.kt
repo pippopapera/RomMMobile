@@ -62,6 +62,28 @@ import com.rommmobile.app.core.design.PillShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import com.rommmobile.app.core.design.gamepadTextField
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
+import com.rommmobile.app.core.input.ModalScope
 import com.rommmobile.app.R
 import com.rommmobile.app.core.design.ErrorState
 import com.rommmobile.app.core.design.EmptyState
@@ -115,6 +137,9 @@ fun LibraryScreen(
     val vm = libraryViewModel(source, onlyPresent)
     val state by vm.state.collectAsStateWithLifecycle()
     var showSort by remember { mutableStateOf(false) }
+    // Search scoped to this folder. Open/closed lives here so the top bar icon and the pad's
+    // Select drive the same field; the text itself belongs to the content below.
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     val meta by vm.meta.collectAsStateWithLifecycle()
     // On the Installed shelf the server total read "1043 giochi" above a hundred cards: the
     // number shown there is the one on the shelf card, what is actually on this device.
@@ -124,6 +149,15 @@ fun LibraryScreen(
 
     Column(Modifier.fillMaxSize()) {
         RommTopBar(title = title, subtitle = subtitle, onBack = onBack) {
+            // Not on the Installed shelf: its list is the server's pages sieved through the local
+            // index, and a term that leaves the first pages empty would stall Paging with a false
+            // "nothing found". That shelf is short by nature; the folders are where search earns
+            // its place.
+            if (!onlyPresent) {
+                IconButton(onClick = { searchOpen = !searchOpen }, modifier = Modifier.gamepadFocusIcon()) {
+                    Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.hint_search))
+                }
+            }
             IconButton(onClick = { vm.toggleView() }, modifier = Modifier.gamepadFocusIcon()) {
                 Icon(if (state.viewMode == ViewMode.GRID) Icons.Rounded.ViewList else Icons.Rounded.GridView, contentDescription = stringResource(R.string.action_toggle_view))
             }
@@ -140,6 +174,9 @@ fun LibraryScreen(
             showSort = showSort,
             onShowSort = { showSort = it },
             onLeaveAfterDelete = onBack,
+            searchPlaceholder = if (onlyPresent) null else stringResource(R.string.search_in_placeholder, title),
+            searchOpen = searchOpen,
+            onSearchOpen = { searchOpen = it },
         )
         // The queue bar must follow the user everywhere downloads can be started.
         DownloadMiniBar(onClick = onOpenDownloads)
@@ -164,6 +201,13 @@ fun LibraryContent(
     handleDownloadsShortcut: Boolean = true,
     /** Where a finished bulk delete leaves the user: back on the platform they came from. */
     onLeaveAfterDelete: () -> Unit = {},
+    /**
+     * Search inside this list, scoped to its source. Null for a list that has its own field (the
+     * Search tab) - the placeholder names the folder, "Search in Game Boy".
+     */
+    searchPlaceholder: String? = null,
+    searchOpen: Boolean = false,
+    onSearchOpen: (Boolean) -> Unit = {},
 ) {
     val layout = RommTheme.layout
     val context = LocalContext.current
@@ -175,6 +219,48 @@ fun LibraryContent(
     val redownload by vm.enqueue.confirmRedownload.collectAsStateWithLifecycle()
     val items: LazyPagingItems<Rom> = vm.items.collectAsLazyPagingItems()
     val hasGamepad by rememberHasGamepad()
+    val searchable = searchPlaceholder != null
+    // The term outlives this composition in the ViewModel (a game opened from the results and
+    // closed again finds the same list); the field text is only its editable mirror.
+    var text by rememberSaveable { mutableStateOf(state.searchTerm) }
+    // What the pager shows versus what the field says. The ViewModel sets appliedTerm only once
+    // a query's first page has landed, so "typed == applied" means the list on screen is the one
+    // the user asked for, and anything that wants to move the cursor can trust its indices.
+    fun effective(s: String) = s.trim().let { if (it.length >= 2) it else "" }
+    val appliedTerm = state.appliedTerm
+    val resultsShown = searchable && appliedTerm.isNotEmpty()
+    val fieldFr = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    var fieldFocused by remember { mutableStateOf(false) }
+    // The pad reaches the field through Select only. Left reachable by directional search, Up
+    // from the first row of results (or Down from the top bar with no results) climbed into it
+    // and threw the keyboard back up. Touch is exempt: a tap on the field must still work.
+    var fieldWanted by remember { mutableStateOf(false) }
+    val touchMode = LocalInputModeManager.current.inputMode == InputMode.Touch
+    // The card the pad was on before the search opened; closing the search returns to it.
+    var preSearchFocus by rememberSaveable { mutableIntStateOf(0) }
+    // The pad's next stop in the list, owed until the list it refers to is on screen and the row
+    // exists. Null when nothing is owed.
+    var pendingFocus by remember { mutableStateOf<Int?>(null) }
+    var focusJob by remember { mutableStateOf<Job?>(null) }
+    // A single request can fail while the field is still being placed; a few spaced ones cannot.
+    // Stops at the first success, or a late retry dragged focus back after the user had moved on.
+    fun focusField() {
+        fieldWanted = true
+        pendingFocus = null
+        focusJob?.cancel()
+        focusJob = scope.launch {
+            repeat(6) {
+                runCatching { fieldFr.requestFocus() }
+                // Focus alone is meant to raise the keyboard; asking explicitly covers the
+                // devices where it does not, and is a no-op where it already did.
+                if (fieldFocused) { keyboard?.show(); return@launch }
+                delay(40)
+            }
+        }
+    }
 
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
@@ -220,7 +306,10 @@ fun LibraryContent(
         }
     }
     val currentLetter = remember(letters, anchorIndex) { vm.currentLetter(letters, anchorIndex)?.label }
-    val railVisible = state.railAvailable && letters.any { it.offset != null } && items.itemCount > 0
+    // No alphabet over results: the rail indexes the whole folder, not a result set. Keyed on the
+    // applied term, so the grid reflows once when results land and once when they go, never per
+    // keystroke, and stays put while the field is merely open.
+    val railVisible = state.railAvailable && letters.any { it.offset != null } && items.itemCount > 0 && !resultsShown
 
     var focusedRom by remember { mutableStateOf<Rom?>(null) }
     // Survives leaving for a game and coming back, so B lands on the game you opened rather than
@@ -235,6 +324,9 @@ fun LibraryContent(
     val picked = remember { mutableStateMapOf<Int, Rom>() }
     var confirmBulk by remember { mutableStateOf(false) }
     fun leaveSelection() { selecting = false; picked.clear() }
+    // The two never contend today (search is off on the Installed shelf, the only place a
+    // selection exists); the order still says which mode is the inner one should that change.
+    BackHandler(enabled = searchOpen) { onSearchOpen(false) }
     BackHandler(enabled = selecting) { leaveSelection() }
     var pendingFocusIndex by remember { mutableIntStateOf(-1) }
     var jumpLabel by remember { mutableStateOf<String?>(null) }
@@ -278,8 +370,82 @@ fun LibraryContent(
         }
     }
 
-    // First page failed for connectivity reasons: fall back to the local cache when possible.
+    // Where the list goes next: the pad's cursor, or just the scroll position for fingers. Applied
+    // at once when the typed term is already the one the pager shows; otherwise it waits for that
+    // pager's first page, and then for the row itself, which deep in a long folder may still be a
+    // placeholder. Never while the field has focus.
+    fun requestListFocus(index: Int) { pendingFocus = index }
     val refresh = items.loadState.refresh
+    LaunchedEffect(pendingFocus, items.loadState, items.itemCount, appliedTerm, state.searchTerm, fieldFocused) {
+        val target = pendingFocus ?: return@LaunchedEffect
+        if (fieldFocused) return@LaunchedEffect
+        if (effective(state.searchTerm) != appliedTerm) return@LaunchedEffect
+        if (refresh !is LoadState.NotLoading) return@LaunchedEffect
+        if (items.itemCount == 0) { pendingFocus = null; return@LaunchedEffect }
+        val idx = target.coerceIn(0, items.itemCount - 1)
+        if (items.peek(idx) == null) {
+            // Bring the placeholder into view so Paging fetches its page; the load state change
+            // runs this again with the row in place.
+            if (isGrid) gridState.scrollToItem(idx) else listState.scrollToItem(idx)
+            return@LaunchedEffect
+        }
+        pendingFocus = null
+        lastFocused = idx
+        if (isGrid) {
+            // The coordinator learns the new count from an effect inside the grid, which runs
+            // after this one; left stale at the result count it would clamp the index to 0.
+            gridFocus.itemCount = items.itemCount
+            if (hasGamepad) gridFocus.focusAt(idx) else gridState.scrollToItem(idx)
+        } else {
+            listState.scrollToItem(idx)
+            if (hasGamepad) pendingFocusIndex = idx
+        }
+    }
+    // The keyboard was put away on purpose (B, or the keyboard's own search key): the pad lands
+    // on the first result, or back where it was when nothing was typed. Up or Down out of the
+    // field move focus themselves and never come through here.
+    fun handOff() { requestListFocus(if (effective(vm.state.value.searchTerm).isEmpty()) preSearchFocus else 0) }
+
+    // Opening focuses the field (and with it the keyboard); closing wipes the term so the folder
+    // is whole again, and sends the cursor back to the card it left. Compared against the value
+    // seen at first composition so a restored "open" (rotation, process death, back from a game)
+    // does not throw the keyboard up on its own.
+    var wasOpen by remember { mutableStateOf(searchOpen) }
+    LaunchedEffect(searchOpen) {
+        if (!searchable) return@LaunchedEffect
+        if (searchOpen && !wasOpen) {
+            // The card under the cursor when it is on screen; otherwise the top of the viewport,
+            // because a finger (or a letter jump made by touch) moved the list without moving
+            // the cursor, and closing must come back to what was being looked at.
+            val visible = if (isGrid) gridState.layoutInfo.visibleItemsInfo.map { it.index } else listState.layoutInfo.visibleItemsInfo.map { it.index }
+            preSearchFocus = if (lastFocused in visible) lastFocused else (visible.firstOrNull() ?: lastFocused)
+            focusField()
+        } else if (!searchOpen && wasOpen) {
+            if (text.isNotEmpty()) { text = ""; vm.setSearchTerm("") }
+            keyboard?.hide()
+            requestListFocus(preSearchFocus)
+        }
+        wasOpen = searchOpen
+    }
+    // Saved state and ViewModel can disagree after process death or a pane switch: the text
+    // survives and the term does not, or the other way round. The field is the truth while it is
+    // shown, and no term may run without a field that shows it.
+    LaunchedEffect(Unit) {
+        if (!searchable) return@LaunchedEffect
+        if (searchOpen) { if (text != state.searchTerm) vm.setSearchTerm(text) }
+        else if (state.searchTerm.isNotEmpty()) { text = ""; vm.setSearchTerm("") }
+    }
+    // Every result set opens at its top. Keyed on the applied term: once per page that lands,
+    // never per keystroke, and no viewport hint is sent to a pager on its way out.
+    LaunchedEffect(appliedTerm) {
+        if (resultsShown && pendingFocus == null) { if (isGrid) gridState.scrollToItem(0) else listState.scrollToItem(0) }
+    }
+
+    // While the field has the keys, no shortcut may fire anywhere: the keyboard does not eat face
+    // or shoulder buttons, so Y, Start, L1/R1 would still reach their screens behind it.
+    if (fieldFocused) ModalScope()
+
+    // First page failed for connectivity reasons: fall back to the local cache when possible.
     LaunchedEffect(refresh) {
         val err = (refresh as? LoadState.Error)?.error?.let { ApiException.from(it) } ?: return@LaunchedEffect
         if (err.kind == ApiErrorKind.OFFLINE || err.kind == ApiErrorKind.TIMEOUT) vm.tryOffline()
@@ -289,6 +455,24 @@ fun LibraryContent(
         // The library's own offline mode swaps the pager to the Room cache, so it needs a way out
         // even more than the Platforms banner does.
         OfflineBanner(visible = state.offline, onRetry = { vm.retryOnline(); items.refresh() })
+        if (searchable && searchOpen) {
+            FolderSearchField(
+                value = text,
+                onValueChange = { text = it; vm.setSearchTerm(it) },
+                placeholder = searchPlaceholder!!,
+                // The keyboard's own search key: put it away, let go of the field, and hand the
+                // pad the results exactly as B does.
+                onSearch = { keyboard?.hide(); focusManager.clearFocus(); handOff() },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = layout.padding, vertical = 4.dp)
+                    .focusRequester(fieldFr)
+                    .focusProperties { canFocus = fieldWanted || touchMode }
+                    .onFocusChanged { f ->
+                        if (f.isFocused) fieldFocused = true
+                        else if (fieldFocused) { fieldFocused = false; fieldWanted = false }
+                    }
+                    .gamepadTextField(MaterialTheme.shapes.medium, onDismissed = { handOff() }),
+            )
+        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 refresh is LoadState.Error && items.itemCount == 0 -> {
@@ -296,7 +480,13 @@ fun LibraryContent(
                     ErrorState(message = err.userMessage(context), onRetry = { vm.retryOnline(); items.retry() })
                 }
                 refresh is LoadState.NotLoading && items.itemCount == 0 -> {
-                    EmptyState(icon = Icons.Rounded.SearchOff, title = emptyMessage ?: stringResource(R.string.library_empty))
+                    EmptyState(
+                        icon = Icons.Rounded.SearchOff,
+                        title = if (resultsShown) stringResource(R.string.search_no_results, appliedTerm) else emptyMessage ?: stringResource(R.string.library_empty),
+                        // Offline the search only sees the pages ever cached: say so rather than
+                        // claim the game does not exist.
+                        subtitle = if (resultsShown && state.offline) stringResource(R.string.search_no_results_offline) else null,
+                    )
                 }
                 else -> Row(Modifier.fillMaxSize()) {
                     BoxWithConstraints(Modifier.weight(1f).fillMaxSize()) {
@@ -387,7 +577,12 @@ fun LibraryContent(
                 }
             }
         }
-        PadBar(installed, isGrid, handleDownloadsShortcut, selecting) {
+        PadBar(installed, isGrid, handleDownloadsShortcut, selecting, searchable, searchOpen, fieldFocused) {
+            // Select searches this folder. Already open: it puts the cursor back in the field, so
+            // refining a term is one press away from the results. B is the only way out.
+            if (searchable && !selecting) {
+                bind(GamepadAction.CONTEXT_MENU, R.string.hint_search) { if (searchOpen) focusField() else onSearchOpen(true) }
+            }
             // Installed shelf: the file is already on the card, so X could only offer to
             // overwrite it. Uninstall and download-again live in the ≡ menu, which is the one
             // place either of them belongs.
@@ -403,8 +598,10 @@ fun LibraryContent(
                 }
             }
             // A mode is a smaller world: while selecting, the bar is X and nothing else. Flipping
-            // the view or re-sorting mid-selection only gave the picks somewhere to hide.
-            if (!selecting) {
+            // the view or re-sorting mid-selection only gave the picks somewhere to hide. While
+            // typing the bus is muted anyway (ModalScope above); dropping the rows keeps the bar
+            // from advertising what would not fire.
+            if (!selecting && !fieldFocused) {
                 bind(
                     GamepadAction.TOGGLE_VIEW,
                     if (isGrid) R.string.hint_view_list else R.string.hint_view_grid,
@@ -451,3 +648,59 @@ private fun statusOf(rom: Rom, presence: Map<String, Set<String>>, progress: Map
     return if (!present && p == null) ItemStatus.NONE else ItemStatus(present, p)
 }
 
+/**
+ * The folder search box. Built on BasicTextField with Material's outlined decoration so it can
+ * sit at 48 dp (the floor its icon slots impose) instead of the 56 dp an OutlinedTextField
+ * insists on: on a short handheld screen those 8 dp are a visible slice of the one row of covers
+ * left under the keyboard.
+ */
+@Composable
+private fun FolderSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val colors = OutlinedTextFieldDefaults.colors()
+    val shape = MaterialTheme.shapes.medium
+    // The clear button is for fingers. On the pad, Up from the first result used to land on it
+    // instead of leaving the field alone; the pad clears by deleting or closes with B.
+    val touchMode = LocalInputModeManager.current.inputMode == InputMode.Touch
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = LocalContentColor.current),
+        cursorBrush = SolidColor(RommTheme.colors.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+        interactionSource = interaction,
+        modifier = modifier,
+        decorationBox = { inner ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = inner,
+                enabled = true,
+                singleLine = true,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interaction,
+                placeholder = { Text(placeholder, maxLines = 1) },
+                leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                trailingIcon = {
+                    if (value.isNotEmpty()) {
+                        IconButton(onClick = { onValueChange("") }, modifier = Modifier.focusProperties { canFocus = touchMode }) {
+                            Icon(Icons.Rounded.Close, stringResource(R.string.action_clear))
+                        }
+                    }
+                },
+                colors = colors,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                container = {
+                    OutlinedTextFieldDefaults.Container(enabled = true, isError = false, interactionSource = interaction, colors = colors, shape = shape)
+                },
+            )
+        },
+    )
+}

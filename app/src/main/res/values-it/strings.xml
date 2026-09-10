@@ -70,6 +70,7 @@
     <string name="hint_more">Altro</string>
     <string name="hint_view_list">Lista</string>
     <string name="hint_view_grid">Griglia</string>
+    <string name="hint_search">Cerca</string>
 
     <string name="folder_create_title">Cartella per %s</string>
     <string name="folder_create_body">Questa piattaforma non ha ancora una cartella. Creo “%s” dentro la cartella ROM?</string>
@@ -107,10 +108,12 @@
     <string name="coll_empty">Nessuna collezione qui</string>
 
     <string name="search_placeholder">Cerca in tutta la libreria</string>
+    <string name="search_in_placeholder">Cerca in %s</string>
     <string name="search_hint_title">Cerca</string>
     <string name="search_hint_body">Scrivi almeno due caratteri. I risultati arrivano dal server, su tutte le piattaforme.</string>
     <string name="search_recent">Recenti</string>
     <string name="search_no_results">Nessun risultato per “%s”</string>
+    <string name="search_no_results_offline">Offline: cercato solo nelle pagine già in cache. Connettiti per cercare in tutta la cartella.</string>
 
     <string name="dl_subtitle">%1$d attivi · %2$d in attesa</string>
     <string name="dl_empty">Nessun download</string>
