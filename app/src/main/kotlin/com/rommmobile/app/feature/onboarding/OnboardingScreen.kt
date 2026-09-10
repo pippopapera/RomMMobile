@@ -66,6 +66,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.rommmobile.app.R
 import com.rommmobile.app.core.design.PadButton
 import com.rommmobile.app.core.design.PadGlyph
@@ -128,7 +135,9 @@ fun OnboardingScreen(onDone: () -> Unit) {
         0 -> state.probe is ProbeState.Ok
         1 -> session is Session.LoggedIn
         2 -> true
-        3 -> state.root != null
+        // A folder alone is not enough: a root kept from an earlier setup shows up as "not
+        // writable" once All files access is missing, and Next used to sail past it.
+        3 -> state.root != null && state.rootWritable == true
         else -> true
     }
 
@@ -490,7 +499,32 @@ private fun StorageStep(state: OnboardingState, vm: OnboardingViewModel) {
     val layout = RommTheme.layout
     val context = LocalContext.current
     var chooser by remember { mutableStateOf(false) }
-    val allFiles = remember(chooser, state.root) { StorageLocations.hasAllFilesAccess(context) }
+    // Order matters here: access first, folder second. Without All files access the picked folder
+    // silently becomes a SAF tree that every write has to go through, so the choice must not be
+    // offered before the permission has been dealt with.
+    var allFiles by remember { mutableStateOf(StorageLocations.hasAllFilesAccess(context)) }
+    var askedOnce by rememberSaveable { mutableStateOf(false) }
+    val grantIntent = remember { StorageLocations.allFilesAccessIntent(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val now = StorageLocations.hasAllFilesAccess(context)
+                if (now != allFiles) {
+                    allFiles = now
+                    // Same folder, new answer: what was read-only a moment ago is writable now.
+                    vm.recheckRoot()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+    val settingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { askedOnce = true }
+    // The folder step is reachable once access is granted, or when this device has no screen to
+    // grant it on, or after the user has been to that screen once and come back without it: the
+    // sequence is enforced, but nobody is left with no way forward.
+    val canChoose = allFiles || grantIntent == null || askedOnce
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(layout.padding * 2)) {
         Text(stringResource(R.string.ob_storage_body), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(8.dp))
@@ -511,9 +545,29 @@ private fun StorageStep(state: OnboardingState, vm: OnboardingViewModel) {
             Spacer(Modifier.height(12.dp))
         }
         val fr = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
-        if (root == null) Button(onClick = { chooser = true }, modifier = Modifier.focusRequester(fr).gamepadFocusRing(PillShape)) { Text(stringResource(R.string.ob_storage_choose)) }
-        else OutlinedButton(onClick = { chooser = true }, modifier = Modifier.focusRequester(fr).gamepadFocusRing(PillShape)) { Text(stringResource(R.string.ob_storage_change)) }
+        LaunchedEffect(canChoose) { runCatching { fr.requestFocus() } }
+        when {
+            !canChoose -> {
+                // Step one, and the only button on screen until it is done.
+                Button(onClick = { settingsLauncher.launch(grantIntent!!) }, modifier = Modifier.focusRequester(fr).gamepadFocusRing(PillShape)) {
+                    Icon(Icons.Rounded.FolderOpen, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.root_allfiles_grant))
+                }
+            }
+            root == null ->
+                Button(onClick = { chooser = true }, modifier = Modifier.focusRequester(fr).gamepadFocusRing(PillShape)) { Text(stringResource(R.string.ob_storage_choose)) }
+            else ->
+                OutlinedButton(onClick = { chooser = true }, modifier = Modifier.focusRequester(fr).gamepadFocusRing(PillShape)) { Text(stringResource(R.string.ob_storage_change)) }
+        }
+        if (canChoose && !allFiles && grantIntent != null) {
+            // Came back without granting: the folder is offered, the grant stays one press away as
+            // the quieter option, whether a folder is already set or not.
+            Spacer(Modifier.height(6.dp))
+            TextButton(onClick = { settingsLauncher.launch(grantIntent) }, modifier = Modifier.gamepadFocusRing(PillShape)) {
+                Text(stringResource(R.string.root_allfiles_grant))
+            }
+        }
     }
     if (chooser) RootChooserDialog(preferredNames = vm.rootNames, onChosen = { vm.setRoot(it); chooser = false }, onDismiss = { chooser = false })
 }

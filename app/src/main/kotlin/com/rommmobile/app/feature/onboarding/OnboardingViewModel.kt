@@ -2,6 +2,7 @@ package com.rommmobile.app.feature.onboarding
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rommmobile.app.core.network.ApiException
@@ -83,6 +84,7 @@ data class OnboardingState(
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
+    handle: SavedStateHandle,
     @ApplicationContext private val context: Context,
     private val auth: AuthRepository,
     private val serverStore: ServerStore,
@@ -93,7 +95,11 @@ class OnboardingViewModel @Inject constructor(
     private val log: FileLogger,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(OnboardingState())
+    // Granting "All files access" makes Android kill the app to remount its storage, so the
+    // user comes back to a cold start. The step lives in saved state so that cold start reopens
+    // the wizard on the folder page they left, not on the server page.
+    private val handle = handle
+    private val _state = MutableStateFlow(OnboardingState(step = handle[KEY_STEP] ?: 0))
     val state: StateFlow<OnboardingState> = _state.asStateFlow()
     val session: StateFlow<Session> = auth.session
 
@@ -234,6 +240,13 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch { settings.setStorageRoot(root); mapping.resetAutomatic(); checkRoot(root) }
     }
 
+    /** Same root, fresh check: All files access may have just been granted or taken away. */
+    fun recheckRoot() {
+        val root = _state.value.root ?: return
+        _state.update { it.copy(rootWritable = null) }
+        viewModelScope.launch { checkRoot(root) }
+    }
+
     private suspend fun checkRoot(root: StorageRoot) {
         val ok = withContext(Dispatchers.IO) { runCatching { FileGatewayFactory.create(context, root).isWritable() }.getOrDefault(false) }
         _state.update { if (it.root == root) it.copy(rootWritable = ok) else it }
@@ -263,7 +276,11 @@ class OnboardingViewModel @Inject constructor(
     fun summaryCreate(slug: String, name: String) = viewModelScope.launch { mapping.createFolder(slug, name); buildSummary() }
     fun summaryClear(slug: String) = viewModelScope.launch { mapping.clear(slug); buildSummary() }
 
-    fun goTo(step: Int) = _state.update { it.copy(step = step.coerceIn(0, 4)) }
+    fun goTo(step: Int) {
+        val clamped = step.coerceIn(0, 4)
+        handle[KEY_STEP] = clamped
+        _state.update { it.copy(step = clamped) }
+    }
 
     fun finish(onDone: () -> Unit) = viewModelScope.launch {
         settings.setOnboardingDone(true)
@@ -272,4 +289,6 @@ class OnboardingViewModel @Inject constructor(
     }
 
     override fun onCleared() { stopDeviceFlow() }
+
+    private companion object { const val KEY_STEP = "onboarding_step" }
 }
