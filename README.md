@@ -87,7 +87,7 @@ Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkH
 
 ## Status
 
-Version **1.0.0**, under active development. Working: library, installed shelf, downloads, folder mapping, firmware, gamepad navigation. Not yet: writing `gamelist.xml` for the frontend, syncing collections and save files, F-Droid publishing.
+Version **1.0.0**, under active development. Working: library, installed shelf, downloads, folder mapping, firmware, gamepad navigation. Not yet: writing `gamelist.xml` for the frontend, syncing collections and save files.
 
 Bug reports and ideas: open an issue on this repository. If you see a three-headed monkey behind you, attach a screenshot.
 

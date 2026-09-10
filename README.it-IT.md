@@ -1,6 +1,6 @@
 # RomMMobile
 
-🇬🇧 [English](README.md)
+🇬🇧 English version: [github.com/pippopapera/RomMMobile](https://github.com/pippopapera/RomMMobile)
 
 App Android per **[RomM](https://romm.app)**, il gestore di ROM self-hosted. Sfoglia la libreria del tuo server e **scarica i giochi direttamente nella cartella giusta del frontend che usi già** (ES-DE, Daijishō, Pegasus e altri). Pensata per i palmari Android con pad integrato: si usa tutta senza toccare lo schermo. Quack.
 
@@ -87,7 +87,7 @@ Stack: Kotlin 2.3, Jetpack Compose, Hilt, Room, Paging 3, DataStore, Coil 3, OkH
 
 ## Stato
 
-Versione **1.0.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi, pubblicazione su F-Droid.
+Versione **1.0.0**, in sviluppo attivo. Funzionano libreria, installati, download, mapping cartelle, firmware e navigazione da pad. Non ancora fatto: scrittura di `gamelist.xml` per il frontend, sincronizzazione di collezioni e salvataggi.
 
 Segnalazioni e proposte: apri una issue su questo repository. Se vedi una scimmia a tre teste dietro di te, allega uno screenshot.
 
