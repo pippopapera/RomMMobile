@@ -25,7 +25,7 @@ RomMMobile **does not launch games**: that is your frontend's job. The app gets 
 
 ## Install
 
-1. Download [`release/RomMMobile.apk`](release/RomMMobile.apk).
+1. Download the latest APK from the [Releases page](https://github.com/pippopapera/RomMMobile/releases).
 2. Copy it to the device and open it (your file manager needs the "install unknown apps" permission). Unknown to Android, not to you.
 3. On first launch the setup wizard asks, in order:
    - **Server**: the RomM address (`http://ip:port` at home, or the HTTPS domain). It is probed right away and the server version is shown.
