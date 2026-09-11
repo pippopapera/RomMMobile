@@ -199,7 +199,10 @@ fun LibraryContent(
     showSort: Boolean = false,
     onShowSort: (Boolean) -> Unit = {},
     emptyMessage: String? = null,
-    /** False when an enclosing screen already owns the R3 shortcut (Home shell, two-pane). */
+    /**
+     * False when an enclosing screen already owns the shoulder shortcuts: R3 and, in the Home
+     * shell and the two-pane library, L1/R1 (sections there, letters here).
+     */
     handleDownloadsShortcut: Boolean = true,
     /** Where a finished bulk delete leaves the user: back on the platform they came from. */
     onLeaveAfterDelete: () -> Unit = {},
@@ -273,6 +276,15 @@ fun LibraryContent(
     // back, and the two ends refetch each other until the screen is left. So cells peek, and only
     // the first and last visible index ask; prefetch distance does the rest.
     val gridMode = state.viewMode == ViewMode.GRID
+    // A letter jump scrolls at once but is not reported to Paging until jumps stop coming for a
+    // moment, or the finger lifts. Each report is a refresh: a new generation, a fresh query on
+    // the server around the new anchor. A scrub along the rail is a jump per letter crossed; when
+    // every one was reported the server was handed a query per letter, cancelled or not, and the
+    // one that mattered queued behind all the others while the grid sat on skeletons. L1/R1
+    // pressed in a burst are the same scrub with buttons.
+    var holdHints by remember { mutableStateOf(false) }
+    var jumpSerial by remember { mutableIntStateOf(0) }
+    LaunchedEffect(jumpSerial) { if (holdHints) { delay(220); holdHints = false } }
     LaunchedEffect(items, gridMode) {
         snapshotFlow {
             val info = if (gridMode) gridState.layoutInfo.visibleItemsInfo.let { it.firstOrNull()?.index to it.lastOrNull()?.index }
@@ -282,10 +294,12 @@ fun LibraryContent(
             // from offset 0 while the viewport is parked far away, showing the very same indices
             // as before. Asking again once each refresh has settled is what tells that generation
             // where we are; without it the cells stayed skeletons until the screen was left.
-            Triple(info.first, info.second, items.itemCount) to items.loadState.refresh
-        }.distinctUntilChanged().collect { (range, refresh) ->
+            Triple(info.first, info.second, items.itemCount) to (items.loadState.refresh to holdHints)
+        }.distinctUntilChanged().collect { (range, gate) ->
             val (first, last, count) = range
-            if (refresh !is LoadState.NotLoading) return@collect
+            val (refresh, hold) = gate
+            // Released, the hold re-emits the same range and the report goes out then.
+            if (hold || refresh !is LoadState.NotLoading) return@collect
             if (count == 0 || first == null || last == null) return@collect
             items[first.coerceIn(0, count - 1)]
             items[last.coerceIn(0, count - 1)]
@@ -357,12 +371,20 @@ fun LibraryContent(
                 listState.scrollToItem(target)
                 pendingFocusIndex = target
             }
-            // Hand Paging the anchor right away, whatever the viewport already reported.
-            items[target]
+            // Hand Paging the anchor right away, whatever the viewport already reported - unless
+            // more jumps are on their way, in which case the hint effect reports on release.
+            if (!holdHints) items[target]
             jumpLabel = vm.currentLetter(letters, target)?.label
         }
     }
     LaunchedEffect(jumpLabel) { if (jumpLabel != null) { delay(600); jumpLabel = null } }
+    // Every jump goes through here: the hold starts (or restarts) before the jump is emitted.
+    fun jump(entry: LetterEntry) {
+        if (entry.offset == null) return
+        holdHints = true
+        jumpSerial++
+        vm.jumpTo(entry)
+    }
 
     // Give the first card focus once the first page is in (gamepad users only). requestFocus can
     // legitimately fail while the list is still being laid out, so keep trying for a moment:
@@ -586,12 +608,12 @@ fun LibraryContent(
                         JumpLabel(jumpLabel, Modifier.align(Alignment.Center))
                     }
                     if (railVisible) {
-                        AlphabetRail(letters = letters, current = currentLetter, onJump = { vm.jumpTo(it) })
+                        AlphabetRail(letters = letters, current = currentLetter, onJump = ::jump, onRelease = { holdHints = false })
                     }
                 }
             }
         }
-        PadBar(installed, isGrid, handleDownloadsShortcut, selecting, searchable, searchOpen, fieldFocused) {
+        PadBar(installed, isGrid, handleDownloadsShortcut, selecting, searchable, searchOpen, fieldFocused, railVisible) {
             // Select searches this folder. Already open: it puts the cursor back in the field, so
             // refining a term is one press away from the results. B is the only way out.
             if (searchable && !selecting) {
@@ -624,6 +646,14 @@ fun LibraryContent(
             }
             // The queue bar sits right below and shows where R3 goes.
             if (handleDownloadsShortcut) silent(GamepadAction.OPEN_DOWNLOADS) { onOpenDownloads() }
+            // L1/R1 step the alphabet, one letter with games at a time, from wherever the list
+            // is. Silent like the section shortcuts: the rail lights the letter reached and the
+            // big label names it. Not in the shell or the two-pane, where the same buttons move
+            // between sections.
+            if (handleDownloadsShortcut && railVisible && !selecting && !fieldFocused) {
+                silent(GamepadAction.PREV_SECTION) { vm.stepLetter(letters, anchorIndex, -1)?.let(::jump) }
+                silent(GamepadAction.NEXT_SECTION) { vm.stepLetter(letters, anchorIndex, +1)?.let(::jump) }
+            }
         }
     }
 

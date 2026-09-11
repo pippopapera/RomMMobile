@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +39,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import com.rommmobile.app.core.design.PillShape
 import com.rommmobile.app.core.design.RommTheme
-import kotlinx.coroutines.delay
 
 /**
  * The web app's vertical letter bar, fed by the server's `char_index`. Letters without
@@ -52,11 +50,14 @@ fun AlphabetRail(
     current: String?,
     onJump: (LetterEntry) -> Unit,
     modifier: Modifier = Modifier,
+    /** The finger left the rail (or tapped): whatever the jumps deferred can happen now. */
+    onRelease: () -> Unit = {},
     width: Dp = RommTheme.layout.alphabetRailWidth,
 ) {
     val colors = RommTheme.colors
     val density = LocalDensity.current
     val jump by rememberUpdatedState(onJump)
+    val release by rememberUpdatedState(onRelease)
 
     BoxWithConstraints(modifier.width(width).fillMaxHeight()) {
         val slot = 14.dp
@@ -64,17 +65,6 @@ fun AlphabetRail(
         val visible = remember(letters, maxLetters) { thin(letters, maxLetters) }
         var railFocused by remember { mutableStateOf(false) }
         var dragLabel by remember { mutableStateOf<String?>(null) }
-        // A finger scrubbing the rail crosses ten letters in a blink. Jumping on each one asked
-        // the server for a page per letter and chained Paging refreshes faster than any could
-        // finish; the grid was left on skeletons. The jump waits for the finger to rest.
-        var pendingDrag by remember { mutableStateOf<LetterEntry?>(null) }
-        LaunchedEffect(pendingDrag) {
-            val e = pendingDrag ?: return@LaunchedEffect
-            delay(140)
-            jump(e)
-            // Cleared so the same letter can be reached again by a later drag.
-            pendingDrag = null
-        }
         // SpaceEvenly puts an equal gap before the first child, between children and after the
         // last, so the letters are NOT a contiguous run of bands starting at y=0. Hit-testing as
         // if they were shifts every tap towards the previous letter.
@@ -96,16 +86,19 @@ fun AlphabetRail(
                 .onFocusChanged { railFocused = it.hasFocus }
                 .background(if (railFocused) colors.surface else colors.background)
                 .pointerInput(visible) {
-                    detectTapGestures { pos -> letterAt(pos.y)?.let { jump(it) } }
+                    detectTapGestures { pos -> letterAt(pos.y)?.let { jump(it); release() } }
                 }
                 .pointerInput(visible) {
                     detectDragGestures(
-                        onDragEnd = { dragLabel = null },
-                        onDragCancel = { dragLabel = null },
+                        onDragEnd = { dragLabel = null; release() },
+                        onDragCancel = { dragLabel = null; release() },
                     ) { change, _ ->
                         change.consume()
+                        // Every letter crossed jumps at once: the list has to move under the
+                        // finger, not once it rests. Moving is free; what the screen defers until
+                        // the finger rests or lifts is telling Paging to fetch there.
                         letterAt(change.position.y)?.let { e ->
-                            if (dragLabel != e.label) { dragLabel = e.label; pendingDrag = e }
+                            if (dragLabel != e.label) { dragLabel = e.label; jump(e) }
                         }
                     }
                 },
@@ -139,7 +132,7 @@ fun AlphabetRail(
                             }
                         )
                         .alpha(if (enabled) 1f else 0.3f)
-                        .then(if (enabled) Modifier.clickable { jump(entry) } else Modifier),
+                        .then(if (enabled) Modifier.clickable { jump(entry); release() } else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

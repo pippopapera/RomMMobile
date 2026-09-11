@@ -44,7 +44,7 @@ Tutto è modificabile in seguito da **Impostazioni**.
 | B | Indietro (alla Home: premi due volte per uscire) |
 | X | Negli Installati: selezione multipla, poi elimina |
 | Y | Griglia / lista |
-| L1 / R1 | Sezione precedente / successiva |
+| L1 / R1 | Sezione precedente / successiva; dentro una piattaforma: lettera precedente / successiva |
 | L3 | Cerca |
 | R3 | Coda download |
 | Start / Select | Ordinamento e menu contestuale |

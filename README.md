@@ -44,7 +44,7 @@ Everything can be changed later from **Settings**.
 | B | Back (on the Home screen: press twice to exit) |
 | X | In Installed: multi-select, then delete |
 | Y | Grid / list |
-| L1 / R1 | Previous / next section |
+| L1 / R1 | Previous / next section; inside a platform: previous / next letter |
 | L3 | Search |
 | R3 | Download queue |
 | Start / Select | Sorting and context menu |

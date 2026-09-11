@@ -67,7 +67,17 @@ class RomRepository @Inject constructor(
      */
     fun pager(query: LibraryQuery, placeholders: Boolean = true, onMeta: (LibraryMeta) -> Unit): Flow<PagingData<Rom>> {
         val config = if (placeholders) pagingConfig else filteredConfig
-        return Pager(config) { RomPagingSource(query, config.pageSize, onMeta) }.flow
+        // One memo for every generation of this pager: a letter jump invalidates the source and
+        // the next one would otherwise ask the server for the count and the char_index again,
+        // on top of the page - the heavy part of a query the user has just asked ten times.
+        val memo = PagerMemo()
+        return Pager(config) { RomPagingSource(query, config.pageSize, memo, onMeta) }.flow
+    }
+
+    /** What a query's first page taught us, kept across the PagingSources of one pager. */
+    private class PagerMemo {
+        var total: Int? = null
+        var metaSent = false
     }
 
     /** Offline fallback: whatever we cached for that platform, sorted by name. */
@@ -100,11 +110,16 @@ class RomRepository @Inject constructor(
     private inner class RomPagingSource(
         private val query: LibraryQuery,
         private val pageSize: Int,
+        private val memo: PagerMemo,
         private val onMeta: (LibraryMeta) -> Unit,
     ) : PagingSource<Int, Rom>() {
 
-        private var total: Int? = null
-        private var metaSent = false
+        private var total: Int?
+            get() = memo.total
+            set(value) { memo.total = value }
+        private var metaSent: Boolean
+            get() = memo.metaSent
+            set(value) { memo.metaSent = value }
 
         override val jumpingSupported: Boolean get() = true
 

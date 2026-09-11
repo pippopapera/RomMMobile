@@ -28,6 +28,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -100,7 +101,10 @@ class LibraryViewModel @AssistedInject constructor(
     private val _meta = MutableStateFlow(LibraryMeta())
     val meta: StateFlow<LibraryMeta> = _meta.asStateFlow()
 
-    private val _jumps = MutableSharedFlow<Int>(extraBufferCapacity = 4)
+    // Latest wins: a finger scrubbing the rail emits a jump per letter crossed, faster than the
+    // list can scroll. Queueing them replayed the whole path after the finger had stopped, and a
+    // full buffer dropped the newest, the one letter that mattered.
+    private val _jumps = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Absolute list index to scroll to (letter jumps). */
     val jumps: SharedFlow<Int> = _jumps.asSharedFlow()
 
@@ -279,5 +283,17 @@ class LibraryViewModel @AssistedInject constructor(
         letters.filter { it.offset != null && it.offset <= anchor }.maxByOrNull { it.offset!! }
 
     fun jumpTo(entry: LetterEntry) { entry.offset?.let { _jumps.tryEmit(it) } }
+
+    /**
+     * The letter [steps] away from the one at [anchor], skipping letters with no games. Before
+     * the first letter (no current) the first step forward is the first letter with games.
+     */
+    fun stepLetter(letters: List<LetterEntry>, anchor: Int, steps: Int): LetterEntry? {
+        val enabled = letters.filter { it.offset != null }.sortedBy { it.offset!! }
+        if (enabled.isEmpty() || steps == 0) return null
+        val cur = enabled.indexOfLast { it.offset!! <= anchor }
+        val next = (cur + steps).coerceIn(0, enabled.lastIndex)
+        return if (next == cur) null else enabled[next]
+    }
 
 }
