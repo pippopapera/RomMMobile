@@ -13,6 +13,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object DiagnosticsRoute
 @Serializable data object LocalLibraryRoute
 @Serializable data object FirmwareRoute
+@Serializable data object ButtonMapRoute
 
 /** Library screen for a platform or a collection; [kind] is one of platform/collection/virtual/smart. */
 @Serializable

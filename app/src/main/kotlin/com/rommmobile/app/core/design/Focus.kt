@@ -1,5 +1,7 @@
 package com.rommmobile.app.core.design
 
+import com.rommmobile.app.core.input.LogicalButton
+import com.rommmobile.app.core.input.LocalGamepad
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
@@ -160,6 +162,7 @@ fun Modifier.gamepadFocusRow(shape: Shape): Modifier = composed {
 fun Modifier.gamepadTextField(shape: Shape, ringWidthDp: Int = 2, onDismissed: (() -> Unit)? = null): Modifier = composed {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val bus = LocalGamepad.current
     val imeVisible = WindowInsets.isImeVisible
     this
         // Before the IME sees it, or the keyboard swallows B and the field keeps focus and simply
@@ -168,7 +171,10 @@ fun Modifier.gamepadTextField(shape: Shape, ringWidthDp: Int = 2, onDismissed: (
         // focus is cleared, not moved, because moving it into a neighbouring field just pops the
         // keyboard straight back open.
         .onInterceptKeyBeforeSoftKeyboard { event ->
-            if (event.key != Key.ButtonB && event.key != Key.Back) return@onInterceptKeyBeforeSoftKeyboard false
+            // Pre-IME dispatch runs before the Activity ever sees the key, so the user's map is
+            // consulted here directly: the button printed B, whatever code it reports.
+            val isB = bus.logicalFor(event.nativeKeyEvent.keyCode) == LogicalButton.B
+            if (!isB && event.key != Key.Back) return@onInterceptKeyBeforeSoftKeyboard false
             if (!imeVisible) return@onInterceptKeyBeforeSoftKeyboard false
             if (event.type == KeyEventType.KeyDown) {
                 keyboard?.hide()

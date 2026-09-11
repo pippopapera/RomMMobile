@@ -1,5 +1,6 @@
 package com.rommmobile.app
 
+import com.rommmobile.app.core.input.remapKey
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -62,37 +63,14 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Gamepad buttons other than A/B/D-pad are consumed by [GamepadBus] so the framework never
-     * applies its generic fallbacks (BUTTON_X becomes DPAD_CENTER, BUTTON_Y becomes BACK, ...).
-     * A, B and the D-pad fall through: the framework turns them into DPAD_CENTER/BACK which Compose
-     * already understands for click and back navigation. When the user enabled the A/B swap we
-     * re-dispatch the opposite button so the fallback chain produces the intended result.
+     * Every key goes through the user's button map first (see [remapKey] for what each printed
+     * button becomes). While a mapper is recording, it gets the raw key and nothing else does;
+     * the system's own keys stay with the system, or the volume could not be set and the
+     * recorder could not be left.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val decided = gamepad.onKeyEvent(event)
-        if (decided != null) return decided
-        // The AOSP fallback that turns BUTTON_A into DPAD_CENTER only fires when the whole window
-        // leaves the key unhandled, which is not dependable once the app listens for gamepad keys
-        // at all: the confirm button lit up under the cursor and A did nothing to it. Translating
-        // here makes "A activates" and "B goes back" facts of this app instead of a hope about the
-        // device's key character map.
-        // Only A. B is deliberately left alone: back is delivered through the predictive-back
-        // dispatcher, not through key dispatch, so a synthesised KEYCODE_BACK here goes nowhere -
-        // whereas the platform fallback from BUTTON_B already reaches it correctly.
-        val translated = when (event.keyCode) {
-            KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
-            else -> 0
-        }
-        if (translated != 0) {
-            return super.dispatchKeyEvent(
-                KeyEvent(
-                    event.downTime, event.eventTime, event.action, translated,
-                    event.repeatCount, event.metaState, event.deviceId, event.scanCode,
-                    event.flags, event.source,
-                )
-            )
-        }
-        return super.dispatchKeyEvent(event)
+        if (!GamepadBus.isSystemKey(event.keyCode) && gamepad.offerToCapture(event)) return true
+        return gamepad.remapKey(event, dispatch = { super.dispatchKeyEvent(it) }, onBack = { onBackPressedDispatcher.onBackPressed() })
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {

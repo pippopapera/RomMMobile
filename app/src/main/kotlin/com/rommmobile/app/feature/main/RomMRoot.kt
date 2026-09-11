@@ -1,5 +1,6 @@
 package com.rommmobile.app.feature.main
 
+import com.rommmobile.app.feature.controls.ButtonMapScreen
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -180,6 +181,7 @@ private fun AppNavHost(appVm: AppViewModel, start: StartDestination, intentEpoch
                 onOpenDiagnostics = { gate.go(DiagnosticsRoute) },
                 onOpenLocalLibrary = { gate.go(LocalLibraryRoute) },
                 onOpenFirmware = { gate.go(FirmwareRoute) },
+                onOpenControls = { gate.go(ButtonMapRoute) },
                 onLoggedOut = { navController.navigate(LoginRoute) { popUpTo(0) { inclusive = true } } },
                 onRerunOnboarding = { navController.navigate(OnboardingRoute) { popUpTo(0) { inclusive = true } } },
             )
@@ -188,6 +190,7 @@ private fun AppNavHost(appVm: AppViewModel, start: StartDestination, intentEpoch
         composable<DiagnosticsRoute> { DiagnosticsScreen(onBack = { gate.pop() }) }
         composable<LocalLibraryRoute> { LocalLibraryScreen(onBack = { gate.pop() }) }
         composable<FirmwareRoute> { FirmwareScreen(onBack = { gate.pop() }) }
+        composable<ButtonMapRoute> { ButtonMapScreen(onBack = { gate.pop() }) }
     }
 }
 

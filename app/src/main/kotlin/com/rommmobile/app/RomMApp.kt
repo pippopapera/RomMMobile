@@ -1,5 +1,10 @@
 package com.rommmobile.app
 
+import com.rommmobile.app.di.ApplicationScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import com.rommmobile.app.data.prefs.SettingsStore
+import com.rommmobile.app.core.input.GamepadBus
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
@@ -24,10 +29,16 @@ class RomMApp : Application(), Configuration.Provider, SingletonImageLoader.Fact
     @Inject lateinit var imageHttpClient: ImageHttpClient
     @Inject lateinit var downloadEngine: DownloadEngine
     @Inject lateinit var fileLogger: FileLogger
+    @Inject lateinit var settings: SettingsStore
+    @Inject lateinit var gamepad: GamepadBus
+    @Inject @ApplicationScope lateinit var appScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()
         fileLogger.install()
+        // The button map is read synchronously on every key, so it lives on the bus and follows
+        // the preference from the first moment the process can receive input.
+        appScope.launch { settings.buttonMap.collect { gamepad.map = it } }
         // Resume any queued downloads that survived a process death.
         downloadEngine.resumeAfterProcessStart()
     }

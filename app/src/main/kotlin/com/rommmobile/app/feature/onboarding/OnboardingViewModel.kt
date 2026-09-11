@@ -1,5 +1,6 @@
 package com.rommmobile.app.feature.onboarding
 
+import com.rommmobile.app.core.input.ButtonMap
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
@@ -80,6 +81,14 @@ data class OnboardingState(
     val cfClientId: String = "",
     val cfClientSecret: String = "",
     val allowInsecureRemote: Boolean = false,
+    /** The pad map as it stands, recorded by the Controls step or kept from before. */
+    val buttonMap: ButtonMap = ButtonMap.DEFAULT,
+    /** Whether the user ever recorded one: a recorded map that equals the default is still theirs. */
+    val buttonMapRecorded: Boolean = false,
+    /** The Controls step opened its recorder once in this run; leaving and coming back must not again. */
+    val controlsPrompted: Boolean = false,
+    /** False until the stored settings have been read: before that [buttonMap] is only the default. */
+    val loaded: Boolean = false,
 )
 
 @HiltViewModel
@@ -99,7 +108,7 @@ class OnboardingViewModel @Inject constructor(
     // user comes back to a cold start. The step lives in saved state so that cold start reopens
     // the wizard on the folder page they left, not on the server page.
     private val handle = handle
-    private val _state = MutableStateFlow(OnboardingState(step = handle[KEY_STEP] ?: 0))
+    private val _state = MutableStateFlow(OnboardingState(step = (handle.get<Int>(KEY_STEP) ?: 0).coerceIn(0, LAST_STEP)))
     val state: StateFlow<OnboardingState> = _state.asStateFlow()
     val session: StateFlow<Session> = auth.session
 
@@ -117,6 +126,9 @@ class OnboardingViewModel @Inject constructor(
                     serverInput = cfg.baseUrl ?: "http://", launcher = s.launcher, root = s.storageRoot,
                     cfClientId = cfg.cfClientId.orEmpty(), cfClientSecret = cfg.cfClientSecret.orEmpty(),
                     allowInsecureRemote = s.allowInsecureRemote,
+                    buttonMap = s.buttonMap,
+                    buttonMapRecorded = s.buttonMapRecorded,
+                    loaded = true,
                 )
             }
             serverInputFlow.value = cfg.baseUrl ?: ""
@@ -233,7 +245,17 @@ class OnboardingViewModel @Inject constructor(
 
     val rootNames: List<String> get() = mapping.map.rootNamesFor(_state.value.launcher)
 
-    /* -------- step 4: storage -------- */
+    /* -------- step 1: controls -------- */
+
+    /** Persisted at once: the rest of the wizard is navigated with the buttons just named. */
+    fun markControlsPrompted() = _state.update { it.copy(controlsPrompted = true) }
+
+    fun setButtonMap(map: ButtonMap) {
+        _state.update { it.copy(buttonMap = map, buttonMapRecorded = true) }
+        viewModelScope.launch { settings.setButtonMap(map); log.i("Input", "button map ${map.encode()}") }
+    }
+
+    /* -------- step 5: storage -------- */
 
     fun setRoot(root: StorageRoot) {
         _state.update { it.copy(root = root, rootWritable = null) }
@@ -277,7 +299,7 @@ class OnboardingViewModel @Inject constructor(
     fun summaryClear(slug: String) = viewModelScope.launch { mapping.clear(slug); buildSummary() }
 
     fun goTo(step: Int) {
-        val clamped = step.coerceIn(0, 4)
+        val clamped = step.coerceIn(0, LAST_STEP)
         handle[KEY_STEP] = clamped
         _state.update { it.copy(step = clamped) }
     }
@@ -290,5 +312,11 @@ class OnboardingViewModel @Inject constructor(
 
     override fun onCleared() { stopDeviceFlow() }
 
-    private companion object { const val KEY_STEP = "onboarding_step" }
+    companion object {
+        // Renamed when the Controls step was put first: a step index saved by an older build
+        // would have been reinterpreted rather than ignored.
+        private const val KEY_STEP = "onboarding_step_v2"
+        /** Controls, server, sign-in, launcher, ROM folder, summary: the screen's STEP_TITLES has one title each. */
+        const val LAST_STEP = 5
+    }
 }

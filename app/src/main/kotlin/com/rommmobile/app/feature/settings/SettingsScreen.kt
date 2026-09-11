@@ -118,6 +118,7 @@ fun SettingsScreen(
     onOpenDiagnostics: () -> Unit,
     onOpenLocalLibrary: () -> Unit,
     onOpenFirmware: () -> Unit,
+    onOpenControls: () -> Unit,
     onLoggedOut: () -> Unit,
     onRerunOnboarding: () -> Unit,
 ) {
@@ -165,6 +166,7 @@ fun SettingsScreen(
             )
 
             SectionHeader(stringResource(R.string.settings_controls))
+            SettingRow(stringResource(R.string.settings_button_map), subtitle = stringResource(if (s.buttonMap.isDefault) R.string.settings_button_map_default else R.string.settings_button_map_custom), onClick = onOpenControls)
             SettingRow(stringResource(R.string.settings_margin), subtitle = "${s.screenMarginDp} dp", onClick = { dialog = "margin" })
 
             SectionHeader(stringResource(R.string.settings_appearance))

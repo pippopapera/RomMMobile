@@ -1,5 +1,8 @@
 package com.rommmobile.app.core.design
 
+import com.rommmobile.app.core.input.LogicalButton
+import com.rommmobile.app.core.input.LocalGamepad
+import androidx.compose.runtime.collectAsState
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -11,8 +14,9 @@ import com.rommmobile.app.core.input.GamepadActions
 import com.rommmobile.app.core.input.rememberHasGamepad
 
 /**
- * The face that fires each action. Mirrors GamepadBus.mapKey and is the ONLY place a hint can
+ * The face that fires each action. Mirrors GamepadBus.actionFor and is the ONLY place a hint can
  * get its glyph, so a screen can no longer print "≡ Sort" while ≡ is wired to the context menu.
+ * In printed buttons: which physical key is "Start" is the ButtonMap's business.
  */
 val GamepadAction.button: PadButton
     get() = when (this) {
@@ -22,12 +26,20 @@ val GamepadAction.button: PadButton
         GamepadAction.NEXT_SECTION -> PadButton.R1
         GamepadAction.OPEN_SEARCH -> PadButton.L3
         GamepadAction.OPEN_DOWNLOADS -> PadButton.R3
-        // Deliberately crossed. The handhelds this targets report their physical Start as
-        // KEYCODE_BUTTON_SELECT and vice versa, so the button a user presses for "sort" is the one
-        // printed Start on the shell. The bar names what is under their thumb, not what the
-        // keycode is called.
         GamepadAction.CONTEXT_MENU -> PadButton.SELECT
         GamepadAction.FILTERS -> PadButton.START
+    }
+
+/** The printed button behind an action, null for the sticks (raw keys, never in the map). */
+val GamepadAction.logical: LogicalButton?
+    get() = when (this) {
+        GamepadAction.DOWNLOAD -> LogicalButton.X
+        GamepadAction.TOGGLE_VIEW -> LogicalButton.Y
+        GamepadAction.PREV_SECTION -> LogicalButton.L1
+        GamepadAction.NEXT_SECTION -> LogicalButton.R1
+        GamepadAction.CONTEXT_MENU -> LogicalButton.SELECT
+        GamepadAction.FILTERS -> LogicalButton.START
+        GamepadAction.OPEN_SEARCH, GamepadAction.OPEN_DOWNLOADS -> null
     }
 
 /** One screen's whole gamepad contract: the same rows are what it runs and what it shows. */
@@ -80,6 +92,12 @@ fun PadBar(vararg keys: Any?, modifier: Modifier = Modifier, content: PadMapBuil
     val map = PadMapBuilder().apply(content).toMap()
     GamepadActions(*keys) { action -> map.dispatch(action) }
     val hasGamepad by rememberHasGamepad()
-    val hints = map.rows.mapNotNull { row -> row.label?.let { row.action.button to stringResource(it) } }
+    // A button the user left unbound cannot fire, so its hint would be a lie.
+    val buttons by LocalGamepad.current.mapFlow.collectAsState()
+    val hints = map.rows.mapNotNull { row ->
+        val logical = row.action.logical
+        if (logical != null && buttons.codeFor(logical) == null) return@mapNotNull null
+        row.label?.let { row.action.button to stringResource(it) }
+    }
     if (hasGamepad && hints.isNotEmpty()) KeyHintBar(hints, modifier)
 }

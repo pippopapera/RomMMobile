@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.rommmobile.app.core.design.ThemeMode
+import com.rommmobile.app.core.input.ButtonMap
 import com.rommmobile.app.core.storage.StorageRoot
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -67,6 +68,9 @@ data class Settings(
     val biosPath: String?,
     val allowInsecureRemote: Boolean,
     val extractOverrides: Map<String, Boolean>,
+    val buttonMap: ButtonMap,
+    /** True once a map was recorded or edited by the user: the wizard then stops offering to record one. */
+    val buttonMapRecorded: Boolean,
 )
 
 @Singleton
@@ -92,6 +96,8 @@ class SettingsStore @Inject constructor(@ApplicationContext private val context:
         val biosPath = stringPreferencesKey("bios_path")
         val allowInsecureRemote = booleanPreferencesKey("allow_insecure_remote")
         val extractOverrides = stringSetPreferencesKey("extract_overrides") // "slug=true"
+        val buttonMap = stringPreferencesKey("button_map") // "UP:19,DOWN:20,..."
+        val buttonMapRecorded = booleanPreferencesKey("button_map_recorded")
     }
 
     val settings: Flow<Settings> = ds.data
@@ -118,6 +124,8 @@ class SettingsStore @Inject constructor(@ApplicationContext private val context:
             extractOverrides = (p[K.extractOverrides] ?: emptySet()).mapNotNull { e ->
                 val i = e.indexOf('='); if (i <= 0) null else e.substring(0, i) to e.substring(i + 1).toBoolean()
             }.toMap(),
+            buttonMap = ButtonMap.decode(p[K.buttonMap]),
+            buttonMapRecorded = p[K.buttonMapRecorded] ?: false,
         )
     }
 
@@ -127,6 +135,7 @@ class SettingsStore @Inject constructor(@ApplicationContext private val context:
     val viewMode: Flow<ViewMode> = settings.map { it.viewMode }.distinctUntilChanged()
     val storageRoot: Flow<StorageRoot?> = settings.map { it.storageRoot }.distinctUntilChanged()
     val launcher: Flow<Launcher> = settings.map { it.launcher }.distinctUntilChanged()
+    val buttonMap: Flow<ButtonMap> = settings.map { it.buttonMap }.distinctUntilChanged()
 
     suspend fun snapshot(): Settings = settings.first()
 
@@ -144,6 +153,7 @@ class SettingsStore @Inject constructor(@ApplicationContext private val context:
     suspend fun setThemeMode(v: ThemeMode) = ds.edit { it[K.themeMode] = v.name }
     suspend fun setBiosPath(v: String?) = ds.edit { if (v.isNullOrBlank()) it.remove(K.biosPath) else it[K.biosPath] = v }
     suspend fun setAllowInsecureRemote(v: Boolean) = ds.edit { it[K.allowInsecureRemote] = v }
+    suspend fun setButtonMap(v: ButtonMap) = ds.edit { it[K.buttonMap] = v.encode(); it[K.buttonMapRecorded] = true }
     suspend fun setExtractOverride(slug: String, extract: Boolean?) = ds.edit { p ->
         val cur = (p[K.extractOverrides] ?: emptySet()).filterNot { it.startsWith("$slug=") }.toMutableSet()
         if (extract != null) cur += "$slug=$extract"

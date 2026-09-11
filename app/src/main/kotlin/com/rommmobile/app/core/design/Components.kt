@@ -1,5 +1,11 @@
 package com.rommmobile.app.core.design
 
+import com.rommmobile.app.core.input.remapKey
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
+import android.view.Window
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -79,6 +85,8 @@ import coil3.request.crossfade
 import com.rommmobile.app.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.rommmobile.app.core.input.GamepadBus
+import com.rommmobile.app.core.input.LogicalButton
 import com.rommmobile.app.core.input.LocalGamepad
 import com.rommmobile.app.core.input.ModalScope
 import kotlin.math.roundToInt
@@ -383,7 +391,7 @@ fun RommDialog(
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = RommTheme.colors.toplayer,
         title = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        text = content,
+        text = { DialogPadRemap(onBack = onDismissRequest); content() },
         confirmButton = {
             if (destructive) {
                 TextButton(onClick = onConfirm, modifier = Modifier.focusRequester(confirmFr).gamepadFocusRing(PillShape)) {
@@ -398,6 +406,29 @@ fun RommDialog(
         } else null,
         properties = DialogProperties(usePlatformDefaultWidth = RommTheme.layout.widthDp >= 480),
     )
+}
+
+/**
+ * A dialog is its own window with its own key dispatch, which the Activity never sees: without
+ * this, a remapped pad would keep the raw layout inside every dialog (B confirming, A closing).
+ * Wraps the dialog window's callback with the same translation the Activity applies.
+ */
+@Composable
+private fun DialogPadRemap(onBack: () -> Unit) {
+    val bus = LocalGamepad.current
+    val view = LocalView.current
+    val back by rememberUpdatedState(onBack)
+    DisposableEffect(view, bus) {
+        val window = (view.parent as? DialogWindowProvider)?.window
+        val original = window?.callback
+        if (window != null && original != null) {
+            window.callback = object : Window.Callback by original {
+                override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+                    bus.remapKey(event, dispatch = { original.dispatchKeyEvent(it) }, onBack = { back() })
+            }
+        }
+        onDispose { if (window != null && original != null && window.callback !== original) window.callback = original }
+    }
 }
 
 /* ----------------------------- key hints ----------------------------- */
@@ -417,32 +448,37 @@ enum class PadButton(val glyph: String, val sprite: Int? = null, val spritePress
     SELECT("⧉", R.drawable.pad_select, R.drawable.pad_select_p);
 
     companion object {
-        /**
-         * Which drawn button a physical key lights up. Start and Select are crossed on purpose,
-         * the same way PadBar maps the actions: the handhelds this targets report the button
-         * printed Start as KEYCODE_BUTTON_SELECT and vice versa.
-         */
-        fun forKeyCode(code: Int): PadButton? = when (code) {
-            KeyEvent.KEYCODE_BUTTON_A -> A
-            KeyEvent.KEYCODE_BUTTON_B -> B
-            KeyEvent.KEYCODE_BUTTON_X -> X
-            KeyEvent.KEYCODE_BUTTON_Y -> Y
-            KeyEvent.KEYCODE_BUTTON_L1 -> L1
-            KeyEvent.KEYCODE_BUTTON_R1 -> R1
-            KeyEvent.KEYCODE_BUTTON_THUMBL -> L3
-            KeyEvent.KEYCODE_BUTTON_THUMBR -> R3
-            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU -> SELECT
-            KeyEvent.KEYCODE_BUTTON_SELECT -> START
-            else -> null
+        /** The drawn face of a printed button; the d-pad and the triggers have none. */
+        fun of(button: LogicalButton): PadButton? = when (button) {
+            LogicalButton.A -> A
+            LogicalButton.B -> B
+            LogicalButton.X -> X
+            LogicalButton.Y -> Y
+            LogicalButton.L1 -> L1
+            LogicalButton.R1 -> R1
+            LogicalButton.START -> START
+            LogicalButton.SELECT -> SELECT
+            LogicalButton.UP, LogicalButton.DOWN, LogicalButton.LEFT, LogicalButton.RIGHT, LogicalButton.L2, LogicalButton.R2 -> null
         }
     }
+}
+
+/** Which drawn button a physical key lights up, through the user's map; the sticks are raw. */
+fun GamepadBus.padButtonFor(code: Int): PadButton? = when (val logical = logicalFor(code)) {
+    null -> when (code) {
+        KeyEvent.KEYCODE_BUTTON_THUMBL -> PadButton.L3
+        KeyEvent.KEYCODE_BUTTON_THUMBR -> PadButton.R3
+        else -> null
+    }
+    else -> PadButton.of(logical)
 }
 
 /** True while the physical key behind [button] is held down. */
 @Composable
 private fun isHeld(button: PadButton): Boolean {
-    val held by LocalGamepad.current.held.collectAsState()
-    return held.any { PadButton.forKeyCode(it) == button }
+    val bus = LocalGamepad.current
+    val held by bus.held.collectAsState()
+    return held.any { bus.padButtonFor(it) == button }
 }
 
 /**

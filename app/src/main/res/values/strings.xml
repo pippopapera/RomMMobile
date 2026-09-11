@@ -186,6 +186,9 @@
     <string name="settings_extract_7z_hint">Off: ES-DE and RetroArch read .7z directly, keeping it whole saves space</string>
     <string name="settings_controls">Controls</string>
     <string name="settings_margin">Screen margin</string>
+    <string name="settings_button_map">Button mapping</string>
+    <string name="settings_button_map_default">Default</string>
+    <string name="settings_button_map_custom">Custom</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_dark">Dark</string>
@@ -195,7 +198,7 @@
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_hint">State, recent downloads, exportable log</string>
     <string name="settings_rerun_onboarding">Run the setup wizard again</string>
-    <string name="settings_rerun_body">Server, login, launcher and folders will be asked again. User folder overrides are kept.</string>
+    <string name="settings_rerun_body">Controls, server, login, launcher and folders will be asked again. User folder overrides are kept.</string>
     <string name="settings_version">Version</string>
 
     <!-- mappings -->
@@ -241,6 +244,39 @@
     <string name="ob_step_launcher">Launcher</string>
     <string name="ob_step_storage">ROM folder</string>
     <string name="ob_step_summary">Summary</string>
+    <string name="ob_step_controls">Controls</string>
+    <string name="controls_intro">Press each button once when asked, so hints and shortcuts match what is printed on your pad. You can change this later in Settings.</string>
+    <string name="controls_no_pad">No gamepad detected. You can map the buttons later from Settings.</string>
+    <string name="controls_current_title">Current mapping</string>
+    <string name="controls_redo">Map the buttons again</string>
+    <string name="controls_press">Press: %s</string>
+    <string name="controls_press_marked">Press the button marked %s</string>
+    <string name="controls_progress">%1$d of %2$d</string>
+    <string name="controls_assigned">%1$s = %2$s</string>
+    <string name="controls_swapped">%1$s and %2$s swapped</string>
+    <string name="controls_refused">%1$s is already used for %2$s</string>
+    <string name="controls_unusable">%s cannot be used here</string>
+    <string name="controls_undone">Cleared: %s. Press it again.</string>
+    <string name="controls_skipped">Skipped: %s</string>
+    <string name="controls_quit">Quit</string>
+    <string name="controls_map">Map the buttons</string>
+    <string name="controls_cleared">%s is now unassigned</string>
+    <string name="controls_refused_required">%s would be left without a key. Give it another key first.</string>
+    <string name="controls_default_caption">Default values, not yet recorded on this pad</string>
+    <string name="controls_hold_hint">Hold a button for a second to undo the last one, for two seconds to quit</string>
+    <string name="controls_undo_last">Undo last</string>
+    <string name="controls_skip">Skip this button</string>
+    <string name="controls_not_assigned">Not assigned</string>
+    <string name="controls_table_intro">Select a button to record its key. Some handhelds report Start and Select the other way round: what matters is the button you press, not its name. Giving a button a key another one holds swaps the two.</string>
+    <string name="controls_table_actions">Actions</string>
+    <string name="controls_redo_sequence">Redo the guided sequence</string>
+    <string name="controls_redo_sequence_hint">Press every button once, in order</string>
+    <string name="controls_reset">Reset to default</string>
+    <string name="controls_undo_change">Undo last change</string>
+    <string name="btn_up">Up</string>
+    <string name="btn_down">Down</string>
+    <string name="btn_left">Left</string>
+    <string name="btn_right">Right</string>
     <string name="ob_server_body">Address of your RomM server. On the home network it is usually an IP and a port; a domain works too.</string>
     <string name="ob_server_advanced">Advanced: Cloudflare Access, plain HTTP</string>
     <string name="ob_server_label">Address</string>

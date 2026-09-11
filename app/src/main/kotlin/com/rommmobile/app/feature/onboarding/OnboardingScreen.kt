@@ -1,5 +1,10 @@
 package com.rommmobile.app.feature.onboarding
 
+import com.rommmobile.app.feature.controls.MappingRow
+import com.rommmobile.app.feature.controls.CaptureSession
+import com.rommmobile.app.feature.controls.ButtonCaptureOverlay
+import com.rommmobile.app.core.input.LogicalButton
+import com.rommmobile.app.core.input.ButtonMap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,7 +122,15 @@ fun launcherDescRes(l: Launcher): Int = when (l) {
     Launcher.CUSTOM -> R.string.launcher_custom_desc
 }
 
-private val STEP_TITLES = listOf(R.string.ob_step_server, R.string.ob_step_auth, R.string.ob_step_launcher, R.string.ob_step_storage, R.string.ob_step_summary)
+// Controls first: every later step is navigated with the buttons this one names, and a pad whose
+// A and B are the other way round would otherwise back out of the sign-in it was confirming.
+private const val STEP_CONTROLS = 0
+private const val STEP_SERVER = 1
+private const val STEP_AUTH = 2
+private const val STEP_LAUNCHER = 3
+private const val STEP_STORAGE = 4
+private const val STEP_SUMMARY = 5
+private val STEP_TITLES = listOf(R.string.ob_step_controls, R.string.ob_step_server, R.string.ob_step_auth, R.string.ob_step_launcher, R.string.ob_step_storage, R.string.ob_step_summary)
 
 @Composable
 fun OnboardingScreen(onDone: () -> Unit) {
@@ -127,74 +140,101 @@ fun OnboardingScreen(onDone: () -> Unit) {
     val layout = RommTheme.layout
     val colors = RommTheme.colors
     val hasGamepad by rememberHasGamepad()
+    // The button recorder. Owned here rather than by the Controls step so its scrim covers Next
+    // and Back as well; the step only asks for it.
+    var capture by remember { mutableStateOf<CaptureSession?>(null) }
+    // Records on its own the first time the Controls step is shown with a pad and no map ever
+    // recorded: the first prompt is Up, which every d-pad reports the same way, so no map is
+    // needed to begin. Once per wizard run, remembered in the ViewModel: a flag inside the step
+    // would not survive leaving it, and a recorded map can equal the default (the Classic's).
+    LaunchedEffect(state.step, state.loaded, hasGamepad) {
+        if (state.step == STEP_CONTROLS && state.loaded && hasGamepad && !state.buttonMapRecorded && !state.controlsPrompted) {
+            vm.markControlsPrompted()
+            capture = CaptureSession(CaptureSession.FULL_ORDER, ButtonMap.EMPTY, refuseDuplicates = true)
+        }
+    }
 
     BackHandler(enabled = state.step > 0) { vm.goTo(state.step - 1) }
-    LaunchedEffect(state.step) { if (state.step == 4) vm.buildSummary() }
+    LaunchedEffect(state.step) { if (state.step == STEP_SUMMARY) vm.buildSummary() }
 
     val canNext = when (state.step) {
-        0 -> state.probe is ProbeState.Ok
-        1 -> session is Session.LoggedIn
-        2 -> true
+        STEP_CONTROLS -> true
+        STEP_SERVER -> state.probe is ProbeState.Ok
+        STEP_AUTH -> session is Session.LoggedIn
+        STEP_LAUNCHER -> true
         // A folder alone is not enough: a root kept from an earlier setup shows up as "not
         // writable" once All files access is missing, and Next used to sail past it.
-        3 -> state.root != null && state.rootWritable == true
+        STEP_STORAGE -> state.root != null && state.rootWritable == true
         else -> true
     }
 
-    Column(Modifier.fillMaxSize()) {
-        RommTopBar(title = stringResource(STEP_TITLES[state.step]), subtitle = stringResource(R.string.ob_step_n, state.step + 1, 5), onBack = if (state.step > 0) ({ vm.goTo(state.step - 1) }) else null)
-        LinearProgressIndicator(progress = { (state.step + 1) / 5f }, modifier = Modifier.fillMaxWidth().height(2.dp), color = colors.primary, trackColor = colors.surface, drawStopIndicator = {})
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (state.step) {
-                0 -> ServerStep(state, vm::onServerInput, vm::setAdvanced)
-                1 -> AuthStep(state, session, vm)
-                2 -> LauncherStep(state.launcher, vm::setLauncher)
-                3 -> StorageStep(state, vm)
-                else -> SummaryStep(state, vm)
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            RommTopBar(title = stringResource(STEP_TITLES[state.step]), subtitle = stringResource(R.string.ob_step_n, state.step + 1, STEP_TITLES.size), onBack = if (state.step > 0) ({ vm.goTo(state.step - 1) }) else null)
+            LinearProgressIndicator(progress = { (state.step + 1) / STEP_TITLES.size.toFloat() }, modifier = Modifier.fillMaxWidth().height(2.dp), color = colors.primary, trackColor = colors.surface, drawStopIndicator = {})
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (state.step) {
+                    STEP_CONTROLS -> ControlsStep(state) { capture = CaptureSession(CaptureSession.FULL_ORDER, ButtonMap.EMPTY, refuseDuplicates = true) }
+                    STEP_SERVER -> ServerStep(state, vm::onServerInput, vm::setAdvanced)
+                    STEP_AUTH -> AuthStep(state, session, vm)
+                    STEP_LAUNCHER -> LauncherStep(state.launcher, vm::setLauncher)
+                    STEP_STORAGE -> StorageStep(state, vm)
+                    else -> SummaryStep(state, vm)
+                }
+            }
+            // Console convention: the confirm button sits bottom-right and carries its glyph, so the
+            // user reads "press A to continue" instead of hunting for it with the d-pad. It also
+            // takes focus on every step that needs no typing, which is why a long list never has to
+            // be scrolled through just to reach "Next".
+            // Extra room on the sides: the focus ring is drawn outside the button, and at the screen
+            // edge the window clipped its right half.
+            Row(Modifier.fillMaxWidth().background(colors.surface).padding(horizontal = layout.padding + 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                if (state.step > 0) {
+                    TextButton(
+                        onClick = { vm.goTo(state.step - 1) },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        modifier = Modifier.heightIn(min = 38.dp).gamepadFocusRing(PillShape),
+                    ) {
+                        if (hasGamepad) { PadGlyph(PadButton.B); Spacer(Modifier.width(6.dp)) }
+                        Text(stringResource(R.string.action_back))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                val nextFr = remember { FocusRequester() }
+                // Keyed on the recorder too: when it closes, focus lands on Next whatever a finger
+                // had focused underneath, and the next A continues instead of recording again.
+                LaunchedEffect(canNext, state.step, capture == null) {
+                    // Not on the server step: its field is what needs the cursor, not Next.
+                    if (canNext && state.step != STEP_SERVER && capture == null) {
+                        delay(120)
+                        runCatching { nextFr.requestFocus() }
+                    }
+                }
+                Button(
+                    onClick = {
+                        when (state.step) {
+                            STEP_SERVER -> vm.confirmServer { vm.goTo(STEP_AUTH) }
+                            STEP_SUMMARY -> vm.finish(onDone)
+                            else -> vm.goTo(state.step + 1)
+                        }
+                    },
+                    enabled = canNext,
+                    // Trimmed from the Material default: at this size the pill is still an easy target
+                    // and it leaves room for the pop when the pad lands on it.
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+                    modifier = Modifier.heightIn(min = 38.dp).focusRequester(nextFr).gamepadFocusRing(PillShape),
+                ) {
+                    Text(stringResource(if (state.step == STEP_SUMMARY) R.string.action_finish else R.string.action_next))
+                    if (hasGamepad) { Spacer(Modifier.width(6.dp)); PadGlyph(PadButton.A) }
+                }
             }
         }
-        // Console convention: the confirm button sits bottom-right and carries its glyph, so the
-        // user reads "press A to continue" instead of hunting for it with the d-pad. It also
-        // takes focus on every step that needs no typing, which is why a long list never has to
-        // be scrolled through just to reach "Next".
-        // Extra room on the sides: the focus ring is drawn outside the button, and at the screen
-        // edge the window clipped its right half.
-        Row(Modifier.fillMaxWidth().background(colors.surface).padding(horizontal = layout.padding + 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (state.step > 0) {
-                TextButton(
-                    onClick = { vm.goTo(state.step - 1) },
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    modifier = Modifier.heightIn(min = 38.dp).gamepadFocusRing(PillShape),
-                ) {
-                    if (hasGamepad) { PadGlyph(PadButton.B); Spacer(Modifier.width(6.dp)) }
-                    Text(stringResource(R.string.action_back))
-                }
-                Spacer(Modifier.width(8.dp))
-            }
-            val nextFr = remember { FocusRequester() }
-            LaunchedEffect(canNext, state.step) {
-                if (canNext && state.step != 0) {
-                    delay(120)
-                    runCatching { nextFr.requestFocus() }
-                }
-            }
-            Button(
-                onClick = {
-                    when (state.step) {
-                        0 -> vm.confirmServer { vm.goTo(1) }
-                        4 -> vm.finish(onDone)
-                        else -> vm.goTo(state.step + 1)
-                    }
-                },
-                enabled = canNext,
-                // Trimmed from the Material default: at this size the pill is still an easy target
-                // and it leaves room for the pop when the pad lands on it.
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
-                modifier = Modifier.heightIn(min = 38.dp).focusRequester(nextFr).gamepadFocusRing(PillShape),
-            ) {
-                Text(stringResource(if (state.step == 4) R.string.action_finish else R.string.action_next))
-                if (hasGamepad) { Spacer(Modifier.width(6.dp)); PadGlyph(PadButton.A) }
-            }
+        capture?.let { session ->
+            ButtonCaptureOverlay(
+                session = session,
+                onFinished = { vm.setButtonMap(it); capture = null },
+                onCancel = { capture = null },
+            )
         }
     }
 }
@@ -212,7 +252,7 @@ fun LoginScreen(onDone: () -> Unit) {
     }
 }
 
-/* ---------------------------------- step 1 ---------------------------------- */
+/* ---------------------------------- step 2 ---------------------------------- */
 
 @Composable
 private fun ServerStep(
@@ -302,7 +342,7 @@ private fun AdvancedServerDialog(
     }
 }
 
-/* ---------------------------------- step 2 ---------------------------------- */
+/* ---------------------------------- step 3 ---------------------------------- */
 
 @Composable
 private fun AuthStep(state: OnboardingState, session: Session, vm: OnboardingViewModel) {
@@ -454,7 +494,7 @@ private fun TokenMethod(busy: Boolean, vm: OnboardingViewModel) {
     }
 }
 
-/* ---------------------------------- step 3 ---------------------------------- */
+/* ---------------------------------- step 4 ---------------------------------- */
 
 @Composable
 private fun LauncherStep(selected: Launcher, onSelect: (Launcher) -> Unit) {
@@ -491,7 +531,41 @@ private fun LauncherStep(selected: Launcher, onSelect: (Launcher) -> Unit) {
     }
 }
 
-/* ---------------------------------- step 4 ---------------------------------- */
+/* ---------------------------------- step 1 ---------------------------------- */
+
+/**
+ * Which physical key is which printed button. Every hint in the app is drawn from this answer,
+ * and the Nova and the Classic disagree on it. The recorder itself is owned by the screen (it
+ * has to cover Next and Back too); this step shows what is known and offers to record again.
+ * Next means "keep what the table shows".
+ */
+@Composable
+private fun ControlsStep(state: OnboardingState, onRecord: () -> Unit) {
+    val colors = RommTheme.colors
+    val layout = RommTheme.layout
+    val hasPad by rememberHasGamepad()
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(layout.padding * 2)) {
+        Text(stringResource(R.string.controls_intro), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(16.dp))
+        if (!hasPad) {
+            Text(stringResource(R.string.controls_no_pad), style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+        } else {
+            Text(stringResource(R.string.controls_current_title), style = MaterialTheme.typography.titleMedium)
+            if (!state.buttonMapRecorded) {
+                // Numbers that were never measured on this pad must not read as if they were.
+                Text(stringResource(R.string.controls_default_caption), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceMuted)
+            }
+            Spacer(Modifier.height(8.dp))
+            LogicalButton.entries.forEach { MappingRow(it, state.buttonMap, Modifier.padding(vertical = 3.dp)) }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onRecord, modifier = Modifier.gamepadFocusRing(PillShape)) {
+                Text(stringResource(if (state.buttonMapRecorded) R.string.controls_redo else R.string.controls_map))
+            }
+        }
+    }
+}
+
+/* ---------------------------------- step 5 ---------------------------------- */
 
 @Composable
 private fun StorageStep(state: OnboardingState, vm: OnboardingViewModel) {
@@ -572,7 +646,7 @@ private fun StorageStep(state: OnboardingState, vm: OnboardingViewModel) {
     if (chooser) RootChooserDialog(preferredNames = vm.rootNames, onChosen = { vm.setRoot(it); chooser = false }, onDismiss = { chooser = false })
 }
 
-/* ---------------------------------- step 5 ---------------------------------- */
+/* ---------------------------------- step 6 ---------------------------------- */
 
 @Composable
 private fun SummaryStep(state: OnboardingState, vm: OnboardingViewModel) {

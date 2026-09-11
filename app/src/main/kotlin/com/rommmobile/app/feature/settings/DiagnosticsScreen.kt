@@ -109,6 +109,8 @@ class DiagnosticsViewModel @Inject constructor(
             "Mapping risolti" to "${maps.size}",
             "Concorrenza / Wi-Fi only" to "${s.concurrency} / ${s.wifiOnly}",
             "Estrazione zip / 7z" to "${s.autoExtractZip} / ${s.autoExtract7z}",
+            // Device-specific by nature: the first thing to ask for when "my Start does nothing".
+            "Mappatura tasti" to (if (s.buttonMap.isDefault) "predefinita" else s.buttonMap.encode()),
         )
         val dl = downloads.recent(20).map { e -> "${fmt.format(Date(e.updatedAt))}  ${e.state.name.padEnd(11)} ${e.title} (${e.platformSlug}) ${e.error ?: ""}".trimEnd() }
         _info.value = DiagnosticsInfo(rows, dl, log.tail(200))
