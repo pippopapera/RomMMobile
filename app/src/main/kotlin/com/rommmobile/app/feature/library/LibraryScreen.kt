@@ -113,6 +113,8 @@ import com.rommmobile.app.feature.downloads.DownloadMiniBar
 import com.rommmobile.app.feature.downloads.FolderDialog
 import com.rommmobile.app.feature.downloads.RedownloadDialog
 import com.rommmobile.app.feature.main.key
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -275,8 +277,15 @@ fun LibraryContent(
         snapshotFlow {
             val info = if (gridMode) gridState.layoutInfo.visibleItemsInfo.let { it.firstOrNull()?.index to it.lastOrNull()?.index }
             else listState.layoutInfo.visibleItemsInfo.let { it.firstOrNull()?.index to it.lastOrNull()?.index }
-            Triple(info.first, info.second, items.itemCount)
-        }.distinctUntilChanged().collect { (first, last, count) ->
+            // The refresh state is part of the key on purpose. Every Paging jump starts a new
+            // generation, and one invalidated before its first page landed makes the next restart
+            // from offset 0 while the viewport is parked far away, showing the very same indices
+            // as before. Asking again once each refresh has settled is what tells that generation
+            // where we are; without it the cells stayed skeletons until the screen was left.
+            Triple(info.first, info.second, items.itemCount) to items.loadState.refresh
+        }.distinctUntilChanged().collect { (range, refresh) ->
+            val (first, last, count) = range
+            if (refresh !is LoadState.NotLoading) return@collect
             if (count == 0 || first == null || last == null) return@collect
             items[first.coerceIn(0, count - 1)]
             items[last.coerceIn(0, count - 1)]
@@ -335,7 +344,10 @@ fun LibraryContent(
     // Letter jumps: scroll, then hand focus to the first item of that letter.
     LaunchedEffect(vm, isGrid) {
         vm.jumps.collect { offset ->
-            val target = offset.coerceIn(0, (items.itemCount - 1).coerceAtLeast(0))
+            // A fresh generation has no items for a moment; a jump landing then would clamp to 0.
+            if (items.itemCount == 0) withTimeoutOrNull(3_000) { snapshotFlow { items.itemCount }.first { it > 0 } }
+            if (items.itemCount == 0) return@collect
+            val target = offset.coerceIn(0, items.itemCount - 1)
             if (isGrid) {
                 gridState.scrollToItem(target)
                 // pendingFocusIndex is only read by the list branch, so the grid needs its own
@@ -345,6 +357,8 @@ fun LibraryContent(
                 listState.scrollToItem(target)
                 pendingFocusIndex = target
             }
+            // Hand Paging the anchor right away, whatever the viewport already reported.
+            items[target]
             jumpLabel = vm.currentLetter(letters, target)?.label
         }
     }

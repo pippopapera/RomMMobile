@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
 import com.rommmobile.app.core.design.PillShape
 import com.rommmobile.app.core.design.RommTheme
+import kotlinx.coroutines.delay
 
 /**
  * The web app's vertical letter bar, fed by the server's `char_index`. Letters without
@@ -62,6 +64,17 @@ fun AlphabetRail(
         val visible = remember(letters, maxLetters) { thin(letters, maxLetters) }
         var railFocused by remember { mutableStateOf(false) }
         var dragLabel by remember { mutableStateOf<String?>(null) }
+        // A finger scrubbing the rail crosses ten letters in a blink. Jumping on each one asked
+        // the server for a page per letter and chained Paging refreshes faster than any could
+        // finish; the grid was left on skeletons. The jump waits for the finger to rest.
+        var pendingDrag by remember { mutableStateOf<LetterEntry?>(null) }
+        LaunchedEffect(pendingDrag) {
+            val e = pendingDrag ?: return@LaunchedEffect
+            delay(140)
+            jump(e)
+            // Cleared so the same letter can be reached again by a later drag.
+            pendingDrag = null
+        }
         // SpaceEvenly puts an equal gap before the first child, between children and after the
         // last, so the letters are NOT a contiguous run of bands starting at y=0. Hit-testing as
         // if they were shifts every tap towards the previous letter.
@@ -92,7 +105,7 @@ fun AlphabetRail(
                     ) { change, _ ->
                         change.consume()
                         letterAt(change.position.y)?.let { e ->
-                            if (dragLabel != e.label) { dragLabel = e.label; jump(e) }
+                            if (dragLabel != e.label) { dragLabel = e.label; pendingDrag = e }
                         }
                     }
                 },
