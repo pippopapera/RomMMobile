@@ -11,12 +11,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,8 +35,11 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.animateFloatAsState
@@ -54,30 +62,65 @@ fun AlphabetRail(
     onRelease: () -> Unit = {},
     width: Dp = RommTheme.layout.alphabetRailWidth,
 ) {
+    if (letters.isEmpty()) return
     val colors = RommTheme.colors
     val density = LocalDensity.current
+    val viewConfiguration = LocalViewConfiguration.current
+    val railViewConfiguration = remember(viewConfiguration) {
+        object : ViewConfiguration by viewConfiguration {
+            // The rail handles gaps itself. Expanded child targets would steal taps on a
+            // disabled letter and select an enabled neighbour instead.
+            override val minimumTouchTargetSize = DpSize.Zero
+        }
+    }
     val jump by rememberUpdatedState(onJump)
     val release by rememberUpdatedState(onRelease)
 
     BoxWithConstraints(modifier.width(width).fillMaxHeight()) {
-        val slot = 14.dp
-        val maxLetters = (maxHeight / slot).toInt().coerceAtLeast(6)
-        val visible = remember(letters, maxLetters) { thin(letters, maxLetters) }
+        // Keep every letter. Compact the spacing on short screens, but never shrink the
+        // text to make it fit: with very little height or large fonts the rail scrolls.
+        val minimumSlot = with(density) { 10.sp.toDp() } + 2.dp
+        val preferredSlot = maxOf(14.dp, minimumSlot)
+        // Use whole pixels so rounding each child cannot turn a fitting rail into an overflow.
+        val slotPx = (constraints.maxHeight / letters.size).coerceIn(
+            with(density) { minimumSlot.roundToPx() },
+            with(density) { preferredSlot.roundToPx() },
+        ).toFloat()
+        val slot = with(density) { slotPx.toDp() }
+        val scroll = rememberScrollState()
         var railFocused by remember { mutableStateOf(false) }
         var dragLabel by remember { mutableStateOf<String?>(null) }
         // SpaceEvenly puts an equal gap before the first child, between children and after the
         // last, so the letters are NOT a contiguous run of bands starting at y=0. Hit-testing as
         // if they were shifts every tap towards the previous letter.
-        val slotPx = with(density) { slot.toPx() }
-        val heightPx = with(density) { maxHeight.toPx() }
-        val gapPx = ((heightPx - slotPx * visible.size) / (visible.size + 1)).coerceAtLeast(0f)
+        val heightPx = constraints.maxHeight.toFloat()
+        val gapPx = ((heightPx - slotPx * letters.size) / (letters.size + 1)).coerceAtLeast(0f)
         val pitchPx = gapPx + slotPx
+        val scrollable = slotPx * letters.size > heightPx
+        val paddingPx = with(density) { 2.dp.toPx() }
+        val maxPop = ((pitchPx - paddingPx) / (slotPx - paddingPx)).coerceAtLeast(1f)
 
-        fun letterAt(y: Float): LetterEntry? {
-            val idx = ((y - gapPx) / pitchPx).toInt().coerceIn(0, visible.lastIndex)
-            return visible.getOrNull(idx)?.takeIf { it.offset != null }
+        // L1/R1 can reach letters outside a very short viewport. Keep that selection visible.
+        LaunchedEffect(current, letters, slotPx, heightPx) {
+            val index = letters.indexOfFirst { it.label == current }
+            if (index >= 0 && scrollable) {
+                val top = gapPx + index * pitchPx
+                val bottom = top + slotPx
+                val target = when {
+                    top < scroll.value -> top.toInt()
+                    bottom > scroll.value + heightPx -> (bottom - heightPx).toInt()
+                    else -> scroll.value
+                }
+                scroll.animateScrollTo(target.coerceAtLeast(0))
+            }
         }
 
+        fun letterAt(y: Float): LetterEntry? {
+            val idx = ((y + scroll.value - gapPx) / pitchPx).toInt().coerceIn(0, letters.lastIndex)
+            return letters[idx].takeIf { it.offset != null }
+        }
+
+        CompositionLocalProvider(LocalViewConfiguration provides railViewConfiguration) {
         Column(
             Modifier
                 .fillMaxHeight()
@@ -85,10 +128,12 @@ fun AlphabetRail(
                 .focusGroup()
                 .onFocusChanged { railFocused = it.hasFocus }
                 .background(if (railFocused) colors.surface else colors.background)
-                .pointerInput(visible) {
+                .pointerInput(letters, slotPx, heightPx) {
                     detectTapGestures { pos -> letterAt(pos.y)?.let { jump(it); release() } }
                 }
-                .pointerInput(visible) {
+                .pointerInput(letters, slotPx, heightPx, scrollable) {
+                    // In the overflow fallback a swipe reveals more letters; tapping still jumps.
+                    if (scrollable) return@pointerInput
                     detectDragGestures(
                         onDragEnd = { dragLabel = null; release() },
                         onDragCancel = { dragLabel = null; release() },
@@ -101,26 +146,29 @@ fun AlphabetRail(
                             if (dragLabel != e.label) { dragLabel = e.label; jump(e) }
                         }
                     }
-                },
+                }
+                .verticalScroll(scroll, enabled = scrollable)
+                .heightIn(min = maxHeight),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            visible.forEach { entry ->
+            letters.forEach { entry ->
                 val enabled = entry.offset != null
                 val isCurrent = enabled && entry.label == current
                 var focused by remember { mutableStateOf(false) }
                 // Same language as a focused card: the letter you are on grows. Colour alone is
                 // easy to miss on a small rail at arm's length.
                 val pop by animateFloatAsState(
-                    targetValue = if (isCurrent) 1.5f else if (focused) 1.25f else 1f,
+                    // Dense rails keep the colour/bold highlight without covering neighbours.
+                    targetValue = minOf(if (isCurrent) 1.5f else if (focused) 1.25f else 1f, maxPop),
                     animationSpec = tween(durationMillis = 120),
                     label = "letterPop",
                 )
                 Box(
                     Modifier
                         .graphicsLayer { scaleX = pop; scaleY = pop }
+                        .height(slot)
                         .padding(vertical = 1.dp)
-                        .height(slot - 2.dp)
                         .fillMaxWidth(0.85f)
                         .clip(PillShape)
                         .onFocusChanged { focused = it.isFocused }
@@ -146,16 +194,8 @@ fun AlphabetRail(
                 }
             }
         }
+        }
     }
-}
-
-/** Fits the rail in the available height: drop empty letters first, then every other one. */
-private fun thin(letters: List<LetterEntry>, max: Int): List<LetterEntry> {
-    if (letters.size <= max) return letters
-    val enabled = letters.filter { it.offset != null }
-    if (enabled.size <= max) return enabled
-    val step = (enabled.size + max - 1) / max
-    return enabled.filterIndexed { i, _ -> i % step == 0 }
 }
 
 /** The big floating letter (48 sp) shown for 600 ms after a jump. */
