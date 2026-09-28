@@ -153,8 +153,8 @@ With `widthClass == EXPANDED` and `shape == LANDSCAPE`, the platform screen uses
 | B (`BUTTON_B`) | back |
 | X (`BUTTON_X`) | **download** the focused item |
 | Y (`BUTTON_Y`) | toggle grid / list |
-| L1 / R1 | previous / next section (Platforms, Collections, Search) |
-| L2 / R2 | previous / next letter (`char_index`) |
+| L1 / R1 | previous / next letter on any list with a letter index (`char_index`, the Platforms grid); auto-repeat while held |
+| L2 / R2 | previous / next section (Platforms, Collections, Installed, Search) |
 | L3 | open search |
 | R3 | open the Downloads screen |
 | Start | context menu for the focused item |

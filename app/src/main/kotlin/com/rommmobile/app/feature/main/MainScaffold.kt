@@ -68,7 +68,8 @@ private enum class Section(val icon: ImageVector, val labelRes: Int) {
 
 /**
  * Shell for the three sections. Rail on the left (D-pad side) for short / wide screens,
- * bottom bar only on tall compact phones. L1/R1 cycle sections, R3 opens the queue.
+ * bottom bar only on tall compact phones. L2/R2 cycle sections, R3 opens the queue; L1/R1 are
+ * left to the letter index of whatever list is showing.
  */
 @Composable
 fun MainScaffold(
@@ -89,7 +90,7 @@ fun MainScaffold(
     val holder = rememberSaveableStateHolder()
     val openCount by appVm.openDownloadCount.collectAsStateWithLifecycle()
 
-    // Silent by design: the rail highlights the section L1/R1 move between, and the queue bar
+    // Silent by design: the rail highlights the section L2/R2 move between, and the queue bar
     // shows where R3 lands. Nothing is drawn here; the shell has no bar of its own.
     PadBar(sectionIndex) {
         silent(GamepadAction.PREV_SECTION) { sectionIndex = (sectionIndex + Section.entries.size - 1) % Section.entries.size }

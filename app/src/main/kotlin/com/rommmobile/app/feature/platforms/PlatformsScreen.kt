@@ -54,7 +54,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import com.rommmobile.app.core.design.PadBar
+import com.rommmobile.app.core.input.GamepadAction
 import com.rommmobile.app.feature.library.AlphabetRail
+import com.rommmobile.app.feature.library.step
 import com.rommmobile.app.feature.library.LetterEntry
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.DisposableEffect
@@ -235,6 +238,23 @@ fun PlatformGrid(platforms: List<Platform>, base: String?, onOpen: (Platform) ->
             letters.filter { it.offset != null && it.offset <= anchor }.maxByOrNull { it.offset!! }?.label
         }
         val scope = rememberCoroutineScope()
+        // One jump for the rail and for L1/R1 alike: the list is in memory, so nothing but the
+        // scroll happens. Either way the cursor lands on the letter, so the rail can follow it.
+        fun jump(entry: LetterEntry) {
+            val target = entry.offset ?: return
+            scope.launch {
+                state.scrollToItem(target)
+                if (hasGamepad) gridFocus.focusAt(target) else gridFocus.moveCursor(target)
+            }
+        }
+        // Silent, like every letter index: the rail lights the letter reached. Held, the buttons
+        // keep stepping (the bus repeats them).
+        if (railWidth > 0.dp) {
+            PadBar(letters) {
+                silent(GamepadAction.PREV_LETTER, repeat = true) { letters.step(anchor, -1)?.let(::jump) }
+                silent(GamepadAction.NEXT_LETTER, repeat = true) { letters.step(anchor, +1)?.let(::jump) }
+            }
+        }
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
                 CompositionLocalProvider(LocalBringIntoViewSpec provides GridBringIntoViewSpec) {
@@ -253,18 +273,7 @@ fun PlatformGrid(platforms: List<Platform>, base: String?, onOpen: (Platform) ->
                 }
             }
             if (railWidth > 0.dp) {
-                AlphabetRail(
-                    letters = letters,
-                    current = current,
-                    onJump = { entry ->
-                        val target = entry.offset ?: return@AlphabetRail
-                        scope.launch {
-                            state.scrollToItem(target)
-                            // Either way the cursor lands on the letter, so the rail can follow it.
-                            if (hasGamepad) gridFocus.focusAt(target) else gridFocus.moveCursor(target)
-                        }
-                    },
-                )
+                AlphabetRail(letters = letters, current = current, onJump = ::jump)
             }
         }
     }

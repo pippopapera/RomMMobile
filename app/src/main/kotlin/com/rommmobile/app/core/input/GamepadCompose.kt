@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 val LocalGamepad = compositionLocalOf<GamepadBus> { error("GamepadBus not provided") }
@@ -24,15 +25,22 @@ val LocalGamepad = compositionLocalOf<GamepadBus> { error("GamepadBus not provid
 /**
  * Collects gamepad actions while the calling composition's lifecycle is RESUMED. Under
  * navigation-compose only the top back stack entry is RESUMED, so a screen behind another
- * never reacts to the same button. [handler] returns true when it consumed the action.
+ * never reacts to the same button. [handler] returns true when it consumed the action;
+ * [onRepeat] receives the held key's action again and again (see [GamepadBus.repeats]).
  */
 @Composable
-fun GamepadActions(vararg keys: Any?, handler: (GamepadAction) -> Boolean) {
+fun GamepadActions(vararg keys: Any?, onRepeat: ((GamepadAction) -> Unit)? = null, handler: (GamepadAction) -> Boolean) {
     val bus = LocalGamepad.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val current = rememberUpdatedState(handler)
+    val currentRepeat = rememberUpdatedState(onRepeat)
     LaunchedEffect(bus, lifecycleOwner, *keys) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            launch {
+                bus.repeats.collect { action ->
+                    if (!bus.isMuted(action)) currentRepeat.value?.invoke(action)
+                }
+            }
             bus.actions.collect { action ->
                 if (!bus.isMuted(action)) current.value(action)
             }

@@ -199,10 +199,7 @@ fun LibraryContent(
     showSort: Boolean = false,
     onShowSort: (Boolean) -> Unit = {},
     emptyMessage: String? = null,
-    /**
-     * False when an enclosing screen already owns the shoulder shortcuts: R3 and, in the Home
-     * shell and the two-pane library, L1/R1 (sections there, letters here).
-     */
+    /** False when an enclosing screen already owns the R3 shortcut (Home shell, two-pane). */
     handleDownloadsShortcut: Boolean = true,
     /** Where a finished bulk delete leaves the user: back on the platform they came from. */
     onLeaveAfterDelete: () -> Unit = {},
@@ -647,12 +644,12 @@ fun LibraryContent(
             // The queue bar sits right below and shows where R3 goes.
             if (handleDownloadsShortcut) silent(GamepadAction.OPEN_DOWNLOADS) { onOpenDownloads() }
             // L1/R1 step the alphabet, one letter with games at a time, from wherever the list
-            // is. Silent like the section shortcuts: the rail lights the letter reached and the
-            // big label names it. Not in the shell or the two-pane, where the same buttons move
-            // between sections.
-            if (handleDownloadsShortcut && railVisible && !selecting && !fieldFocused) {
-                silent(GamepadAction.PREV_SECTION) { vm.stepLetter(letters, anchorIndex, -1)?.let(::jump) }
-                silent(GamepadAction.NEXT_SECTION) { vm.stepLetter(letters, anchorIndex, +1)?.let(::jump) }
+            // is; held, they keep stepping, and Paging hears about it once, on release (every
+            // step goes through jump(), which keeps the hold up). Silent like the section
+            // shortcuts: the rail lights the letter reached and the big label names it.
+            if (railVisible && !selecting && !fieldFocused) {
+                silent(GamepadAction.PREV_LETTER, repeat = true) { letters.step(anchorIndex, -1)?.let(::jump) }
+                silent(GamepadAction.NEXT_LETTER, repeat = true) { letters.step(anchorIndex, +1)?.let(::jump) }
             }
         }
     }

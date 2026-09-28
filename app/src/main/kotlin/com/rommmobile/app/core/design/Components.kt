@@ -443,12 +443,12 @@ enum class PadButton(val glyph: String, val sprite: Int? = null, val spritePress
     B("B", R.drawable.pad_east, R.drawable.pad_east_p),
     X("X", R.drawable.pad_west, R.drawable.pad_west_p),
     Y("Y", R.drawable.pad_north, R.drawable.pad_north_p),
-    L1("L1"), R1("R1"), L3("L3"), R3("R3"),
+    L1("L1"), R1("R1"), L2("L2"), R2("R2"), L3("L3"), R3("R3"),
     START("≡", R.drawable.pad_start, R.drawable.pad_start_p),
     SELECT("⧉", R.drawable.pad_select, R.drawable.pad_select_p);
 
     companion object {
-        /** The drawn face of a printed button; the d-pad and the triggers have none. */
+        /** The drawn face of a printed button; the d-pad has none. */
         fun of(button: LogicalButton): PadButton? = when (button) {
             LogicalButton.A -> A
             LogicalButton.B -> B
@@ -456,9 +456,11 @@ enum class PadButton(val glyph: String, val sprite: Int? = null, val spritePress
             LogicalButton.Y -> Y
             LogicalButton.L1 -> L1
             LogicalButton.R1 -> R1
+            LogicalButton.L2 -> L2
+            LogicalButton.R2 -> R2
             LogicalButton.START -> START
             LogicalButton.SELECT -> SELECT
-            LogicalButton.UP, LogicalButton.DOWN, LogicalButton.LEFT, LogicalButton.RIGHT, LogicalButton.L2, LogicalButton.R2 -> null
+            LogicalButton.UP, LogicalButton.DOWN, LogicalButton.LEFT, LogicalButton.RIGHT -> null
         }
     }
 }

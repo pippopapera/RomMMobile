@@ -57,6 +57,19 @@ enum class PresenceFilter { ALL, PRESENT }
 @Immutable
 data class LetterEntry(val label: String, val offset: Int?)
 
+/**
+ * The letter [steps] away from the one at [anchor] (the last letter whose first item is at or
+ * before it), skipping letters with no items; null at the end of the alphabet. Shared by every
+ * list with a letter index, so L1/R1 mean the same thing on each.
+ */
+fun List<LetterEntry>.step(anchor: Int, steps: Int): LetterEntry? {
+    val enabled = filter { it.offset != null }.sortedBy { it.offset!! }
+    if (enabled.isEmpty() || steps == 0) return null
+    val cur = enabled.indexOfLast { it.offset!! <= anchor }
+    val next = (cur + steps).coerceIn(0, enabled.lastIndex)
+    return if (next == cur) null else enabled[next]
+}
+
 @Immutable
 data class LibraryUiState(
     val viewMode: ViewMode = ViewMode.GRID,
@@ -283,17 +296,5 @@ class LibraryViewModel @AssistedInject constructor(
         letters.filter { it.offset != null && it.offset <= anchor }.maxByOrNull { it.offset!! }
 
     fun jumpTo(entry: LetterEntry) { entry.offset?.let { _jumps.tryEmit(it) } }
-
-    /**
-     * The letter [steps] away from the one at [anchor], skipping letters with no games. Before
-     * the first letter (no current) the first step forward is the first letter with games.
-     */
-    fun stepLetter(letters: List<LetterEntry>, anchor: Int, steps: Int): LetterEntry? {
-        val enabled = letters.filter { it.offset != null }.sortedBy { it.offset!! }
-        if (enabled.isEmpty() || steps == 0) return null
-        val cur = enabled.indexOfLast { it.offset!! <= anchor }
-        val next = (cur + steps).coerceIn(0, enabled.lastIndex)
-        return if (next == cur) null else enabled[next]
-    }
 
 }

@@ -4,12 +4,18 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.rommmobile.app.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -19,8 +25,10 @@ import kotlin.math.max
 enum class GamepadAction {
     DOWNLOAD,        // X
     TOGGLE_VIEW,     // Y
-    PREV_SECTION,    // L1
-    NEXT_SECTION,    // R1
+    PREV_LETTER,     // L1: one letter back on any list with a letter index; repeats while held
+    NEXT_LETTER,     // R1: one letter forward
+    PREV_SECTION,    // L2
+    NEXT_SECTION,    // R2
     OPEN_SEARCH,     // L3
     OPEN_DOWNLOADS,  // R3
     CONTEXT_MENU,    // Select, the printed one
@@ -34,10 +42,22 @@ enum class GamepadAction {
  * and B keep their framework semantics (focus move, click, back) via [remapKey].
  */
 @Singleton
-class GamepadBus @Inject constructor() {
+class GamepadBus @Inject constructor(@ApplicationScope private val scope: CoroutineScope) {
 
     private val _actions = MutableSharedFlow<GamepadAction>(extraBufferCapacity = 16)
     val actions: SharedFlow<GamepadAction> = _actions.asSharedFlow()
+
+    /**
+     * Auto-repeat, our own rather than the platform's: whether a pad button repeats at all, and
+     * how fast, differs per controller driver. While an action's key stays down its action is
+     * offered here every [REPEAT_INTERVAL_MS] after an initial [REPEAT_DELAY_MS]; a screen opts
+     * in per binding (letter stepping wants it, section switching does not). One key repeats at
+     * a time: the last one pressed.
+     */
+    private val _repeats = MutableSharedFlow<GamepadAction>(extraBufferCapacity = 16)
+    val repeats: SharedFlow<GamepadAction> = _repeats.asSharedFlow()
+    private var repeatJob: Job? = null
+    private var repeatCode = -1
 
     /** Right stick position, in [-1, 1]. Consumers scroll while it is outside the dead zone. */
     private val _rightStick = MutableStateFlow(0f to 0f)
@@ -105,6 +125,7 @@ class GamepadBus @Inject constructor() {
     }
 
     private fun clearHeld() {
+        stopRepeat()
         heldKeys.clear()
         pressed.clear()
         _held.value = emptySet()
@@ -141,11 +162,39 @@ class GamepadBus @Inject constructor() {
         }
         when (event.action) {
             KeyEvent.ACTION_DOWN -> {
-                if (event.repeatCount == 0 && heldKeys.add(code)) _actions.tryEmit(action)
+                if (event.repeatCount == 0 && heldKeys.add(code)) {
+                    _actions.tryEmit(action)
+                    startRepeat(code, action)
+                }
             }
-            KeyEvent.ACTION_UP -> heldKeys.remove(code)
+            KeyEvent.ACTION_UP -> {
+                heldKeys.remove(code)
+                // The framework sends a cancelled UP for a key still down when the window loses
+                // focus, so a repeat cannot outlive the press it belongs to.
+                if (code == repeatCode) stopRepeat()
+            }
         }
         return true
+    }
+
+    // Key events arrive on the main thread; only the timer body runs elsewhere, and it touches
+    // nothing but the flow. Emission from a worker thread is fine for a SharedFlow.
+    private fun startRepeat(code: Int, action: GamepadAction) {
+        stopRepeat()
+        repeatCode = code
+        repeatJob = scope.launch {
+            delay(REPEAT_DELAY_MS)
+            while (isActive) {
+                _repeats.tryEmit(action)
+                delay(REPEAT_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopRepeat() {
+        repeatJob?.cancel()
+        repeatJob = null
+        repeatCode = -1
     }
 
     fun onMotionEvent(event: MotionEvent): Boolean {
@@ -155,18 +204,19 @@ class GamepadBus @Inject constructor() {
         if (!isJoystick || event.action != MotionEvent.ACTION_MOVE) return false
 
         capture?.let { sink ->
-            // Nothing scrolls under the recorder. The triggers are analogue on some handhelds and
-            // never produce a key: crossing half travel is turned into a press of their canonical
-            // code, which is what the recorder would have been handed on a pad with switches.
-            // The event is still left unhandled: a d-pad reported as a hat only becomes DPAD_*
-            // keys through the platform's synthesis, which runs for unhandled motion alone.
+            // Nothing scrolls under the recorder; the triggers go to it as the keys a pad with
+            // switches would have sent. The event is still left unhandled: a d-pad reported as a
+            // hat only becomes DPAD_* keys through the platform's synthesis, which runs for
+            // unhandled motion alone.
             _rightStick.value = 0f to 0f
-            val l = max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE)) > 0.5f
-            val r = max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS)) > 0.5f
-            if (l != leftTrigger) { leftTrigger = l; sink(triggerKey(event, KeyEvent.KEYCODE_BUTTON_L2, l)) }
-            if (r != rightTrigger) { rightTrigger = r; sink(triggerKey(event, KeyEvent.KEYCODE_BUTTON_R2, r)) }
+            triggerEdges(event, sink)
             return false
         }
+
+        // Same conversion for normal use: a trigger pull becomes its canonical key and goes down
+        // the key path (action, repeat, held), where a pad that reports both a key and an axis
+        // for the same pull is deduplicated - a second DOWN for a code already held is a no-op.
+        triggerEdges(event) { onKeyEvent(it) }
 
         val rx = deadZone(event.getAxisValue(MotionEvent.AXIS_Z))
         val ry = deadZone(event.getAxisValue(MotionEvent.AXIS_RZ))
@@ -179,6 +229,20 @@ class GamepadBus @Inject constructor() {
 
     private var leftTrigger = false
     private var rightTrigger = false
+
+    /**
+     * The triggers are analogue on some handhelds and never produce a key. Crossing half travel
+     * is a press of their canonical code, coming back under a third is the release: the gap
+     * keeps a finger resting on the edge from chattering.
+     */
+    private fun triggerEdges(event: MotionEvent, sink: (KeyEvent) -> Unit) {
+        val l = max(event.getAxisValue(MotionEvent.AXIS_LTRIGGER), event.getAxisValue(MotionEvent.AXIS_BRAKE))
+        val r = max(event.getAxisValue(MotionEvent.AXIS_RTRIGGER), event.getAxisValue(MotionEvent.AXIS_GAS))
+        val lDown = if (leftTrigger) l > TRIGGER_RELEASE else l > TRIGGER_PRESS
+        if (lDown != leftTrigger) { leftTrigger = lDown; sink(triggerKey(event, KeyEvent.KEYCODE_BUTTON_L2, lDown)) }
+        val rDown = if (rightTrigger) r > TRIGGER_RELEASE else r > TRIGGER_PRESS
+        if (rDown != rightTrigger) { rightTrigger = rDown; sink(triggerKey(event, KeyEvent.KEYCODE_BUTTON_R2, rDown)) }
+    }
 
     private fun triggerKey(from: MotionEvent, code: Int, down: Boolean): KeyEvent {
         val now = SystemClock.uptimeMillis()
@@ -194,12 +258,14 @@ class GamepadBus @Inject constructor() {
     private fun actionFor(logical: LogicalButton?, code: Int): GamepadAction? = when (logical) {
         LogicalButton.X -> GamepadAction.DOWNLOAD
         LogicalButton.Y -> GamepadAction.TOGGLE_VIEW
-        LogicalButton.L1 -> GamepadAction.PREV_SECTION
-        LogicalButton.R1 -> GamepadAction.NEXT_SECTION
+        LogicalButton.L1 -> GamepadAction.PREV_LETTER
+        LogicalButton.R1 -> GamepadAction.NEXT_LETTER
+        LogicalButton.L2 -> GamepadAction.PREV_SECTION
+        LogicalButton.R2 -> GamepadAction.NEXT_SECTION
         LogicalButton.START -> GamepadAction.FILTERS
         LogicalButton.SELECT -> GamepadAction.CONTEXT_MENU
         LogicalButton.UP, LogicalButton.DOWN, LogicalButton.LEFT, LogicalButton.RIGHT,
-        LogicalButton.A, LogicalButton.B, LogicalButton.L2, LogicalButton.R2 -> null
+        LogicalButton.A, LogicalButton.B -> null
         null -> when (code) {
             KeyEvent.KEYCODE_BUTTON_THUMBL -> GamepadAction.OPEN_SEARCH
             KeyEvent.KEYCODE_BUTTON_THUMBR -> GamepadAction.OPEN_DOWNLOADS
@@ -212,6 +278,11 @@ class GamepadBus @Inject constructor() {
         KeyEvent.isGamepadButton(code) || code == KeyEvent.KEYCODE_BUTTON_THUMBL || code == KeyEvent.KEYCODE_BUTTON_THUMBR
 
     companion object {
+        private const val REPEAT_DELAY_MS = 400L
+        private const val REPEAT_INTERVAL_MS = 110L
+        private const val TRIGGER_PRESS = 0.5f
+        private const val TRIGGER_RELEASE = 0.3f
+
         /** Keys the recorder must never take: the system needs them, and the user needs the volume. */
         fun isSystemKey(code: Int): Boolean = when (code) {
             KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_HOME, KeyEvent.KEYCODE_APP_SWITCH, KeyEvent.KEYCODE_POWER,

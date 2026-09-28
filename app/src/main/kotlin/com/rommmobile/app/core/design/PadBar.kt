@@ -22,8 +22,10 @@ val GamepadAction.button: PadButton
     get() = when (this) {
         GamepadAction.DOWNLOAD -> PadButton.X
         GamepadAction.TOGGLE_VIEW -> PadButton.Y
-        GamepadAction.PREV_SECTION -> PadButton.L1
-        GamepadAction.NEXT_SECTION -> PadButton.R1
+        GamepadAction.PREV_LETTER -> PadButton.L1
+        GamepadAction.NEXT_LETTER -> PadButton.R1
+        GamepadAction.PREV_SECTION -> PadButton.L2
+        GamepadAction.NEXT_SECTION -> PadButton.R2
         GamepadAction.OPEN_SEARCH -> PadButton.L3
         GamepadAction.OPEN_DOWNLOADS -> PadButton.R3
         GamepadAction.CONTEXT_MENU -> PadButton.SELECT
@@ -35,8 +37,10 @@ val GamepadAction.logical: LogicalButton?
     get() = when (this) {
         GamepadAction.DOWNLOAD -> LogicalButton.X
         GamepadAction.TOGGLE_VIEW -> LogicalButton.Y
-        GamepadAction.PREV_SECTION -> LogicalButton.L1
-        GamepadAction.NEXT_SECTION -> LogicalButton.R1
+        GamepadAction.PREV_LETTER -> LogicalButton.L1
+        GamepadAction.NEXT_LETTER -> LogicalButton.R1
+        GamepadAction.PREV_SECTION -> LogicalButton.L2
+        GamepadAction.NEXT_SECTION -> LogicalButton.R2
         GamepadAction.CONTEXT_MENU -> LogicalButton.SELECT
         GamepadAction.FILTERS -> LogicalButton.START
         GamepadAction.OPEN_SEARCH, GamepadAction.OPEN_DOWNLOADS -> null
@@ -45,10 +49,12 @@ val GamepadAction.logical: LogicalButton?
 /** One screen's whole gamepad contract: the same rows are what it runs and what it shows. */
 @Stable
 class PadMap internal constructor(internal val rows: List<Row>) {
-    internal class Row(val action: GamepadAction, @StringRes val label: Int?, val run: () -> Unit)
+    internal class Row(val action: GamepadAction, @StringRes val label: Int?, val repeat: Boolean, val run: () -> Unit)
 
-    internal fun dispatch(action: GamepadAction): Boolean {
+    /** [repeat] marks an auto-repeat of a held key: only rows that asked for repeats run then. */
+    internal fun dispatch(action: GamepadAction, repeat: Boolean = false): Boolean {
         val row = rows.firstOrNull { it.action == action } ?: return false
+        if (repeat && !row.repeat) return false
         row.run()
         return true
     }
@@ -57,18 +63,22 @@ class PadMap internal constructor(internal val rows: List<Row>) {
 class PadMapBuilder internal constructor() {
     private val rows = mutableListOf<PadMap.Row>()
 
-    /** Handled AND advertised: the normal case. The bar can only show what the screen runs. */
-    fun bind(action: GamepadAction, @StringRes label: Int, run: () -> Unit) {
-        rows += PadMap.Row(action, label, run)
+    /**
+     * Handled AND advertised: the normal case. The bar can only show what the screen runs.
+     * [repeat] = run again and again while the key is held (stepping, never toggling).
+     */
+    fun bind(action: GamepadAction, @StringRes label: Int, repeat: Boolean = false, run: () -> Unit) {
+        rows += PadMap.Row(action, label, repeat, run)
     }
 
     /**
      * Handled on purpose WITHOUT a hint. Only for shortcuts the screen already explains some
-     * other way: the rail highlights the section L1/R1 move between, the queue bar is where R3
-     * lands. A separate verb keeps a silent binding a decision instead of an oversight.
+     * other way: the rail highlights the section L2/R2 move between, the letter index lights the
+     * letter L1/R1 reached, the queue bar is where R3 lands. A separate verb keeps a silent
+     * binding a decision instead of an oversight.
      */
-    fun silent(action: GamepadAction, run: () -> Unit) {
-        rows += PadMap.Row(action, null, run)
+    fun silent(action: GamepadAction, repeat: Boolean = false, run: () -> Unit) {
+        rows += PadMap.Row(action, null, repeat, run)
     }
 
     internal fun toMap(): PadMap {
@@ -90,7 +100,7 @@ class PadMapBuilder internal constructor() {
 @Composable
 fun PadBar(vararg keys: Any?, modifier: Modifier = Modifier, content: PadMapBuilder.() -> Unit) {
     val map = PadMapBuilder().apply(content).toMap()
-    GamepadActions(*keys) { action -> map.dispatch(action) }
+    GamepadActions(*keys, onRepeat = { action -> map.dispatch(action, repeat = true) }) { action -> map.dispatch(action) }
     val hasGamepad by rememberHasGamepad()
     // A button the user left unbound cannot fire, so its hint would be a lie.
     val buttons by LocalGamepad.current.mapFlow.collectAsState()

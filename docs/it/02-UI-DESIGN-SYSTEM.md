@@ -153,8 +153,8 @@ Con `widthClass == EXPANDED` e `shape == LANDSCAPE`, la schermata piattaforma us
 | B (`BUTTON_B`) | indietro |
 | X (`BUTTON_X`) | **scarica** l'elemento a fuoco |
 | Y (`BUTTON_Y`) | commuta griglia / lista |
-| L1 / R1 | sezione precedente / successiva (Piattaforme, Collezioni, Cerca) |
-| L2 / R2 | lettera precedente / successiva (`char_index`) |
+| L1 / R1 | lettera precedente / successiva su ogni lista con indice di lettere (`char_index`, griglia Piattaforme); ripetizione se tenuti premuti |
+| L2 / R2 | sezione precedente / successiva (Piattaforme, Collezioni, Installati, Cerca) |
 | L3 | apri ricerca |
 | R3 | apri schermata Download |
 | Start | menu contestuale dell'elemento a fuoco |
